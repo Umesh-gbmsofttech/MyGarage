@@ -1,0 +1,44 @@
+name: EAS Build (Android & iOS)
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: Build and Deploy Expo App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Authenticate with Expo
+        run: eas whoami || eas login --token ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build Android (AAB)
+        run: eas build --platform android --profile production --non-interactive
+
+      # - name: Build iOS (IPA)
+      #   run: eas build --platform ios --profile production --non-interactive
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3  # Full reference for v3
+        with:
+          name: build-artifacts
+          path: |
+            ./build/*.apk
+            ./build/*.aab
+            ./build/*.ipa
