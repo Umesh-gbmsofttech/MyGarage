@@ -37,3 +37,7 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+# generated native folders
+/android
+android/app/release.keystore

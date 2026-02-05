@@ -4,7 +4,7 @@
     "slug": "MyGarageApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/MyGarage.png",
+    "icon": "./assets/images/MyGarage.jpg",
     "scheme": "mygarageapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,22 +13,23 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/MyGarage.png",
+        "foregroundImage": "./assets/images/MyGarage.jpg",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.mygarage.app"
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/MyGarage.png"
+      "favicon": "./assets/images/MyGarage.jpg"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/MyGarage.png",
+          "image": "./assets/images/MyGarage.jpg",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
