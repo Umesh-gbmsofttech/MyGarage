@@ -87,7 +87,7 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.mygarage.app'
+    namespace 'com.anonymous.MyGarageApp'
     defaultConfig {
         applicationId 'com.mygarage.app'
         minSdkVersion rootProject.ext.minSdkVersion
