@@ -39,5 +39,5 @@ yarn-error.*
 app-example
 
 # generated native folders
-/android
+# /android
 android/app/release.keystore
