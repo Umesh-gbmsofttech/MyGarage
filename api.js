@@ -1,8 +1,16 @@
-const isProduction = process.env.NODE_ENV === 'production';
+import Constants from 'expo-constants';
 
-// Use your deployed server URL in production and localhost for development
-const API_URL = isProduction
-  ? 'https://mygarage-server.onrender.com'
-  : 'http://localhost:8080';
+const getBaseUrl = () => {
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (!hostUri) {
+    // return 'http://localhost:8080/api';
+    return 'https://mygarage-server.onrender.com/api';
+  }
+  const lanIp = hostUri.split(':')[ 0 ];
+  return `http://${lanIp}:8080/api`;
+};
 
-export default API_URL;
+export const API_BASE = getBaseUrl();
+console.log('Using API:', API_BASE);
+
+export default API_BASE;

@@ -1,0 +1,81 @@
+import React, { useState } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import AppShell from '../components/layout/AppShell';
+import { useAuth } from '../src/context/AuthContext';
+import api from '../src/services/api';
+
+const FeedbackScreen = () => {
+  const { token } = useAuth();
+  const [rating, setRating] = useState('5');
+  const [comment, setComment] = useState('');
+  const [message, setMessage] = useState('');
+
+  const handleSubmit = async () => {
+    if (!token) {
+      setMessage('Please login to send feedback.');
+      return;
+    }
+    await api.createReview(token, { type: 'PLATFORM', rating: Number(rating), comment });
+    setMessage('Thanks for the feedback!');
+    setComment('');
+  };
+
+  return (
+    <AppShell title="Feedback">
+      <View style={styles.container}>
+        <Text style={styles.title}>Rate the platform</Text>
+        <TextInput value={rating} onChangeText={setRating} style={styles.input} keyboardType="numeric" />
+        <TextInput
+          value={comment}
+          onChangeText={setComment}
+          style={[styles.input, styles.textArea]}
+          placeholder="Share your feedback"
+          multiline
+        />
+        <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}>
+          <Text style={styles.primaryButtonText}>Submit</Text>
+        </TouchableOpacity>
+        {message ? <Text style={styles.message}>{message}</Text> : null}
+      </View>
+    </AppShell>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 20,
+    gap: 12,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2A24',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#E4E8E4',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+  },
+  textArea: {
+    minHeight: 90,
+  },
+  primaryButton: {
+    backgroundColor: '#1B6B4E',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  message: {
+    color: '#1B6B4E',
+    fontWeight: '600',
+  },
+});
+
+export default FeedbackScreen;

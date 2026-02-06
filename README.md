@@ -5,7 +5,7 @@ MyGarage is a comprehensive mobile application designed to connect car owners wi
 ## 📱 Android App
 
 Download the latest signed APK:  
-👉 https://github.com/rahulrathod2002/MyGarageApp/releases/latest
+👉 https://github.com/Umesh-gbmsofttech/MyGarage/releases/tag/v4
 
 > Note: Enable “Install unknown apps” on your Android device.
 
