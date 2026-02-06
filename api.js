@@ -1,13 +1,13 @@
 import Constants from 'expo-constants';
 
 const getBaseUrl = () => {
-  const hostUri = Constants.expoConfig?.hostUri;
-  if (!hostUri) {
-    // return 'http://localhost:8080/api';
-    return 'https://mygarage-server.onrender.com/api';
+  if (__DEV__) {
+    const hostUri = Constants.expoConfig?.hostUri;
+    const lanIp = hostUri?.split(':')[ 0 ];
+    return `http://${lanIp}:8080/api`;
   }
-  const lanIp = hostUri.split(':')[ 0 ];
-  return `http://${lanIp}:8080/api`;
+
+  return 'https://mygarage-server.onrender.com/api';
 };
 
 export const API_BASE = getBaseUrl();
