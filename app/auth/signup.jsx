@@ -3,7 +3,6 @@ import { Alert, Image, StyleSheet, Switch, Text, TextInput, TouchableOpacity, Vi
 import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../src/context/AuthContext';
 import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import api from '../../src/services/api';
 import COLORS from '../../theme/colors';
 
@@ -13,6 +12,7 @@ const SignUpScreen = () => {
   const [ role, setRole ] = useState('VEHICLE_OWNER');
   const [ showPassword, setShowPassword ] = useState(false);
   const [ profileImage, setProfileImage ] = useState(null);
+  const [ imagePickerReady, setImagePickerReady ] = useState(true);
   const [ form, setForm ] = useState({
     name: '',
     surname: '',
@@ -89,6 +89,15 @@ const SignUpScreen = () => {
   };
 
   const handlePickImage = async () => {
+    let ImagePicker;
+    try {
+      ImagePicker = await import('expo-image-picker');
+      setImagePickerReady(true);
+    } catch (err) {
+      setImagePickerReady(false);
+      Alert.alert('Error', 'Image picker is not available in this build.');
+      return;
+    }
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission required', 'Please allow access to your photos.');

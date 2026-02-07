@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import MapView, { Marker, UrlTile } from 'react-native-maps';
 import * as Location from 'expo-location';
+import Constants from 'expo-constants';
 
 const haversine = (lat1, lon1, lat2, lon2) => {
   const R = 6371;
@@ -19,6 +20,10 @@ const haversine = (lat1, lon1, lat2, lon2) => {
 
 const MapScreen = ({ ownerLocation, mechanicLocation }) => {
   const [currentLocation, setCurrentLocation] = useState(null);
+  const apiKey =
+    Constants.expoConfig?.android?.config?.googleMaps?.apiKey ||
+    Constants.manifest?.android?.config?.googleMaps?.apiKey ||
+    Constants.manifest2?.extra?.expoClient?.android?.config?.googleMaps?.apiKey;
 
   useEffect(() => {
     const getUserLocation = async () => {
@@ -54,6 +59,9 @@ const MapScreen = ({ ownerLocation, mechanicLocation }) => {
 
   if (!mapCenter) {
     return <Text style={styles.loading}>Loading map...</Text>;
+  }
+  if (!apiKey) {
+    return <Text style={styles.loading}>Map unavailable (missing Google Maps API key).</Text>;
   }
 
   return (

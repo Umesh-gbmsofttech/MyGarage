@@ -4,7 +4,6 @@ import AppShell from '../../../components/layout/AppShell';
 import { useAuth } from '../../../src/context/AuthContext';
 import api from '../../../src/services/api';
 import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import API_BASE from '../../../api';
 import COLORS from '../../../theme/colors';
 
@@ -25,6 +24,19 @@ const ProfileScreen = () => {
   const [ mechanicVisible, setMechanicVisible ] = useState(true);
   const [ platformReviews, setPlatformReviews ] = useState([]);
   const [ mechanicReviews, setMechanicReviews ] = useState([]);
+  const [ imagePickerReady, setImagePickerReady ] = useState(true);
+
+  const getImagePicker = async () => {
+    try {
+      const module = await import('expo-image-picker');
+      setImagePickerReady(true);
+      return module;
+    } catch (err) {
+      setImagePickerReady(false);
+      setError('Image picker is not available in this build.');
+      return null;
+    }
+  };
 
   const loadProfile = useCallback(async () => {
     if (!token) return;
@@ -99,6 +111,8 @@ const ProfileScreen = () => {
   };
 
   const handlePickBanner = async () => {
+    const ImagePicker = await getImagePicker();
+    if (!ImagePicker) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       setBannerError('Permission to access media library is required.');
@@ -149,6 +163,8 @@ const ProfileScreen = () => {
   };
 
   const handlePickProfileImage = async () => {
+    const ImagePicker = await getImagePicker();
+    if (!ImagePicker) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       setError('Permission to access media library is required.');
