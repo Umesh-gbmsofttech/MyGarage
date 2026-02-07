@@ -3,6 +3,7 @@ import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'reac
 import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../src/context/AuthContext';
 import { useRouter } from 'expo-router';
+import COLORS from '../../theme/colors';
 
 const SignInScreen = () => {
   const { signin } = useAuth();
@@ -29,7 +30,7 @@ const SignInScreen = () => {
       <View style={ styles.container }>
         <Text style={ styles.title }>Sign In</Text>
         <TextInput
-          placeholderTextColor="#39a87f"
+          placeholderTextColor={COLORS.placeholder}
           placeholder="Email"
           value={ email }
           onChangeText={ setEmail }
@@ -39,7 +40,7 @@ const SignInScreen = () => {
         />
         <View style={ styles.passwordRow }>
           <TextInput
-            placeholderTextColor="#39a87f"
+            placeholderTextColor={COLORS.placeholder}
             placeholder="Password"
             value={ password }
             onChangeText={ setPassword }

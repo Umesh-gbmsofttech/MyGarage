@@ -22,15 +22,25 @@ const MapScreen = ({ ownerLocation, mechanicLocation }) => {
 
   useEffect(() => {
     const getUserLocation = async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        return;
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          return;
+        }
+        let loc = null;
+        try {
+          loc = await Location.getCurrentPositionAsync({});
+        } catch (error) {
+          loc = await Location.getLastKnownPositionAsync({});
+        }
+        if (!loc) return;
+        setCurrentLocation({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        });
+      } catch (error) {
+        // ignore location errors
       }
-      const loc = await Location.getCurrentPositionAsync({});
-      setCurrentLocation({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-      });
     };
     getUserLocation();
   }, []);

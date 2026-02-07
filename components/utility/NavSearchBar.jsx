@@ -12,6 +12,7 @@ import {
     View
 } from 'react-native';
 import MenuPanel from './MenuPanel';
+import COLORS from '../../theme/colors';
 
 export default function NavSearchBar({ isMenuOpen, setIsMenuOpen }) {
     const navigation = useNavigation();
@@ -42,7 +43,7 @@ export default function NavSearchBar({ isMenuOpen, setIsMenuOpen }) {
                             value={ searchQuery }
                             onChangeText={ setSearchQuery }
                             autoFocus
-                            placeholderTextColor="#999"
+                            placeholderTextColor={ COLORS.placeholder }
                         />
                     ) : (
                         <Text style={ styles.title }>MYGARAGE</Text>

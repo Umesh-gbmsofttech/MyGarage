@@ -5,6 +5,7 @@ import { useAuth } from '../../src/context/AuthContext';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../../src/services/api';
+import COLORS from '../../theme/colors';
 
 const SignUpScreen = () => {
   const { signupOwner, signupMechanic } = useAuth();
@@ -130,13 +131,13 @@ const SignUpScreen = () => {
           ) }
         </TouchableOpacity>
 
-        <TextInput placeholderTextColor="#39a87f" placeholder="Name" value={ form.name } onChangeText={ (v) => update('name', v) } style={ styles.input } />
-        <TextInput placeholderTextColor="#39a87f" placeholder="Surname" value={ form.surname } onChangeText={ (v) => update('surname', v) } style={ styles.input } />
-        <TextInput placeholderTextColor="#39a87f" placeholder="Mobile" value={ form.mobile } onChangeText={ (v) => update('mobile', v) } style={ styles.input } />
-        <TextInput placeholderTextColor="#39a87f" placeholder="Email" value={ form.email } onChangeText={ (v) => update('email', v) } style={ styles.input } />
+        <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Name" value={ form.name } onChangeText={ (v) => update('name', v) } style={ styles.input } />
+        <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Surname" value={ form.surname } onChangeText={ (v) => update('surname', v) } style={ styles.input } />
+        <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Mobile" value={ form.mobile } onChangeText={ (v) => update('mobile', v) } style={ styles.input } />
+        <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Email" value={ form.email } onChangeText={ (v) => update('email', v) } style={ styles.input } />
         <View style={ styles.passwordRow }>
           <TextInput
-            placeholderTextColor="#39a87f"
+            placeholderTextColor={ COLORS.placeholder }
             placeholder="Password"
             value={ form.password }
             onChangeText={ (v) => update('password', v) }
@@ -150,9 +151,9 @@ const SignUpScreen = () => {
 
         { role === 'MECHANIC' && (
           <>
-            <TextInput placeholder="Experience" value={ form.experience } onChangeText={ (v) => update('experience', v) } style={ styles.input } />
-            <TextInput placeholder="Speciality" value={ form.speciality } onChangeText={ (v) => update('speciality', v) } style={ styles.input } />
-            <TextInput placeholder="City" value={ form.city } onChangeText={ (v) => update('city', v) } style={ styles.input } />
+            <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Experience" value={ form.experience } onChangeText={ (v) => update('experience', v) } style={ styles.input } />
+            <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Speciality" value={ form.speciality } onChangeText={ (v) => update('speciality', v) } style={ styles.input } />
+            <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="City" value={ form.city } onChangeText={ (v) => update('city', v) } style={ styles.input } />
             <View style={ styles.switchRow }>
               <Text style={ styles.switchLabel }>Shop active</Text>
               <Switch value={ form.shopActive } onValueChange={ (v) => update('shopActive', v) } />

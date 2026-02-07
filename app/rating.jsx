@@ -4,6 +4,7 @@ import AppShell from '../components/layout/AppShell';
 import { useAuth } from '../src/context/AuthContext';
 import api from '../src/services/api';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import COLORS from '../theme/colors';
 
 const RatingScreen = () => {
   const { token } = useAuth();
@@ -37,6 +38,7 @@ const RatingScreen = () => {
           onChangeText={setComment}
           style={[styles.input, styles.textArea]}
           placeholder="Share your experience"
+          placeholderTextColor={COLORS.placeholder}
           multiline
         />
         <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}>

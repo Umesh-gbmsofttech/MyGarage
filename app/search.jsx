@@ -4,6 +4,7 @@ import AppShell from '../components/layout/AppShell';
 import MechanicCard from '../components/mechanic/MechanicCard';
 import api from '../src/services/api';
 import * as Location from 'expo-location';
+import COLORS from '../theme/colors';
 
 const SearchScreen = () => {
   const [query, setQuery] = useState('');
@@ -13,10 +14,20 @@ const SearchScreen = () => {
   const [coords, setCoords] = useState(null);
 
   const loadLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') return;
-    const loc = await Location.getCurrentPositionAsync({});
-    setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      let loc = null;
+      try {
+        loc = await Location.getCurrentPositionAsync({});
+      } catch (error) {
+        loc = await Location.getLastKnownPositionAsync({});
+      }
+      if (!loc) return;
+      setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+    } catch (error) {
+      // ignore location errors
+    }
   };
 
   const search = async () => {
@@ -43,6 +54,7 @@ const SearchScreen = () => {
         <View style={styles.searchRow}>
           <TextInput
             placeholder="Search by name, speciality, city"
+            placeholderTextColor={COLORS.placeholder}
             value={query}
             onChangeText={setQuery}
             style={styles.input}

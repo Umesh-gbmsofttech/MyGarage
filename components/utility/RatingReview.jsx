@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
+import COLORS from "../../theme/colors";
 
 const RatingReview = () => {
     const [ rating, setRating ] = useState(0);
@@ -46,6 +47,7 @@ const RatingReview = () => {
                 multiline
                 numberOfLines={ 4 }
                 placeholder="Write your feedback here..."
+                placeholderTextColor={ COLORS.placeholder }
                 value={ feedback }
                 onChangeText={ setFeedback }
             />

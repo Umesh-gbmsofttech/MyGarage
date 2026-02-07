@@ -6,6 +6,7 @@ import api from '../../../src/services/api';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import API_BASE from '../../../api';
+import COLORS from '../../../theme/colors';
 
 const ProfileScreen = () => {
   const router = useRouter();
@@ -53,10 +54,12 @@ const ProfileScreen = () => {
         setBanners(bannersData);
       }
       const platform = await api.platformReviews();
-      setPlatformReviews(platform);
-      if (data.role === 'MECHANIC') {
+      setPlatformReviews(Array.isArray(platform) ? platform : []);
+      if (data.role === 'MECHANIC' && data.userId) {
         const mechReviews = await api.mechanicReviews(data.userId);
-        setMechanicReviews(mechReviews);
+        setMechanicReviews(Array.isArray(mechReviews) ? mechReviews : []);
+      } else {
+        setMechanicReviews([]);
       }
     } catch (err) {
       setError(err.message || 'Failed to load profile');
@@ -325,7 +328,7 @@ const ProfileScreen = () => {
 
               <Text style={ styles.subTitle }>Mechanic visibility</Text>
               <TextInput
-                placeholderTextColor="#39a87f"
+                placeholderTextColor={COLORS.placeholder}
                 placeholder="Mechanic user ID"
                 value={ mechanicId }
                 onChangeText={ setMechanicId }
@@ -372,21 +375,21 @@ const ProfileScreen = () => {
               <Text style={ styles.secondaryButtonText }>Change Profile Image</Text>
             </TouchableOpacity>
             <TextInput
-              placeholderTextColor="#39a87f"
+              placeholderTextColor={COLORS.placeholder}
               placeholder="First name"
               value={ edit.firstName }
               onChangeText={ (value) => setEdit((prev) => ({ ...prev, firstName: value })) }
               style={ styles.input }
             />
             <TextInput
-              placeholderTextColor="#39a87f"
+              placeholderTextColor={COLORS.placeholder}
               placeholder="Surname"
               value={ edit.surname }
               onChangeText={ (value) => setEdit((prev) => ({ ...prev, surname: value })) }
               style={ styles.input }
             />
             <TextInput
-              placeholderTextColor="#39a87f"
+              placeholderTextColor={COLORS.placeholder}
               placeholder="Mobile"
               value={ edit.mobile }
               onChangeText={ (value) => setEdit((prev) => ({ ...prev, mobile: value })) }
@@ -396,35 +399,35 @@ const ProfileScreen = () => {
             { profile?.role === 'MECHANIC' && (
               <>
                 <TextInput
-                  placeholderTextColor="#39a87f"
+                  placeholderTextColor={COLORS.placeholder}
                   placeholder="Experience"
                   value={ edit.experience }
                   onChangeText={ (value) => setEdit((prev) => ({ ...prev, experience: value })) }
                   style={ styles.input }
                 />
                 <TextInput
-                  placeholderTextColor="#39a87f"
+                  placeholderTextColor={COLORS.placeholder}
                   placeholder="Speciality"
                   value={ edit.speciality }
                   onChangeText={ (value) => setEdit((prev) => ({ ...prev, speciality: value })) }
                   style={ styles.input }
                 />
                 <TextInput
-                  placeholderTextColor="#39a87f"
+                  placeholderTextColor={COLORS.placeholder}
                   placeholder="City"
                   value={ edit.city }
                   onChangeText={ (value) => setEdit((prev) => ({ ...prev, city: value })) }
                   style={ styles.input }
                 />
                 <TextInput
-                  placeholderTextColor="#39a87f"
+                  placeholderTextColor={COLORS.placeholder}
                   placeholder="Expertise"
                   value={ edit.expertise }
                   onChangeText={ (value) => setEdit((prev) => ({ ...prev, expertise: value })) }
                   style={ styles.input }
                 />
                 <TextInput
-                  placeholderTextColor="#39a87f"
+                  placeholderTextColor={COLORS.placeholder}
                   placeholder="About"
                   value={ edit.about }
                   onChangeText={ (value) => setEdit((prev) => ({ ...prev, about: value })) }
@@ -444,14 +447,14 @@ const ProfileScreen = () => {
             { profile?.role === 'VEHICLE_OWNER' && (
               <>
                 <TextInput
-                  placeholderTextColor="#39a87f"
+                  placeholderTextColor={COLORS.placeholder}
                   placeholder="City"
                   value={ edit.city }
                   onChangeText={ (value) => setEdit((prev) => ({ ...prev, city: value })) }
                   style={ styles.input }
                 />
                 <TextInput
-                  placeholderTextColor="#39a87f"
+                  placeholderTextColor={COLORS.placeholder}
                   placeholder="Address"
                   value={ edit.addressLine }
                   onChangeText={ (value) => setEdit((prev) => ({ ...prev, addressLine: value })) }

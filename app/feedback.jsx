@@ -3,6 +3,7 @@ import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 import AppShell from '../components/layout/AppShell';
 import { useAuth } from '../src/context/AuthContext';
 import api from '../src/services/api';
+import COLORS from '../theme/colors';
 
 const FeedbackScreen = () => {
   const { token } = useAuth();
@@ -30,6 +31,7 @@ const FeedbackScreen = () => {
           onChangeText={setComment}
           style={[styles.input, styles.textArea]}
           placeholder="Share your feedback"
+          placeholderTextColor={COLORS.placeholder}
           multiline
         />
         <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}>

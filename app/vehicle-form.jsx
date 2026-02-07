@@ -4,6 +4,7 @@ import { Alert, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } f
 import AppShell from '../components/layout/AppShell';
 import { useAuth } from '../src/context/AuthContext';
 import api from '../src/services/api';
+import COLORS from '../theme/colors';
 
 const defaultGuides = {
   regular: 'Keep up with oil changes, air filter checks, and brake inspections every 6 months.',
@@ -70,12 +71,12 @@ export default function VehicleForm() {
     <AppShell hideChrome hideSupport>
       <View style={ styles.container }>
         <Text style={ styles.heading }>Vehicle Information</Text>
-        <TextInput placeholderTextColor="#39a87f" placeholder="Vehicle Type" style={ styles.input } value={ vehicleType } onChangeText={ setVehicleType } />
-        <TextInput placeholderTextColor="#39a87f" placeholder="Model" style={ styles.input } value={ model } onChangeText={ setModel } />
-        <TextInput placeholderTextColor="#39a87f" placeholder="Fuel Type" style={ styles.input } value={ fuelType } onChangeText={ setFuelType } />
+        <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Vehicle Type" style={ styles.input } value={ vehicleType } onChangeText={ setVehicleType } />
+        <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Model" style={ styles.input } value={ model } onChangeText={ setModel } />
+        <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Fuel Type" style={ styles.input } value={ fuelType } onChangeText={ setFuelType } />
         { mode !== 'diy' && (
           <TextInput
-            placeholderTextColor="#39a87f"
+            placeholderTextColor={ COLORS.placeholder }
             placeholder="Describe the issue"
             style={ styles.input }
             value={ issue }

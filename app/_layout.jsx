@@ -9,7 +9,10 @@ const RELEASES_API_URL = 'https://api.github.com/repos/Umesh-gbmsofttech/MyGarag
 
 const normalizeVersion = (value) => {
   if (!value) return '';
-  return String(value).trim().replace(/^v/i, '');
+  const match = String(value).trim().replace(/^v/i, '').match(/(\d+(\.\d+){0,3})/);
+  const cleaned = match ? match[1] : '';
+  if (!cleaned.includes('.')) return '';
+  return cleaned;
 };
 
 const compareSemver = (a, b) => {
@@ -47,7 +50,14 @@ const AuthGate = ({ children }) => {
 const UpdatePrompt = () => {
   const [visible, setVisible] = useState(false);
   const [latestTag, setLatestTag] = useState('');
-  const currentVersion = useMemo(() => normalizeVersion(Constants.expoConfig?.version), []);
+  const currentVersion = useMemo(() => {
+    return normalizeVersion(
+      Constants.nativeAppVersion ||
+        Constants.expoConfig?.version ||
+        Constants.manifest?.version ||
+        Constants.manifest2?.extra?.expoClient?.version,
+    );
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -60,6 +70,7 @@ const UpdatePrompt = () => {
         const data = await response.json();
         const tag = normalizeVersion(data?.tag_name);
         if (!tag || !mounted || !currentVersion) return;
+        if (tag === currentVersion) return;
         if (compareSemver(tag, currentVersion) > 0) {
           setLatestTag(tag);
           setVisible(true);

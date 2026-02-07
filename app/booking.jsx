@@ -6,6 +6,7 @@ import AppShell from '../components/layout/AppShell';
 import MapScreen from '../components/maps/MapScreen';
 import { useAuth } from '../src/context/AuthContext';
 import api from '../src/services/api';
+import COLORS from '../theme/colors';
 
 const BookingScreen = () => {
   const { bookingId } = useLocalSearchParams();
@@ -40,11 +41,21 @@ const BookingScreen = () => {
 
   const pushLocation = async () => {
     if (!locationEnabled || !token || !bookingId) return;
-    const current = await Location.getCurrentPositionAsync({});
-    await api.updateLocation(token, bookingId, {
-      latitude: current.coords.latitude,
-      longitude: current.coords.longitude,
-    });
+    try {
+      let current = null;
+      try {
+        current = await Location.getCurrentPositionAsync({});
+      } catch (error) {
+        current = await Location.getLastKnownPositionAsync({});
+      }
+      if (!current) return;
+      await api.updateLocation(token, bookingId, {
+        latitude: current.coords.latitude,
+        longitude: current.coords.longitude,
+      });
+    } catch (error) {
+      // ignore location errors
+    }
   };
 
   const loadLocations = async () => {
@@ -179,6 +190,7 @@ const BookingScreen = () => {
             <>
               <TextInput
                 placeholder="Enter Meet OTP"
+                placeholderTextColor={COLORS.placeholder}
                 value={otpMeet}
                 onChangeText={setOtpMeet}
                 style={styles.input}
@@ -193,6 +205,7 @@ const BookingScreen = () => {
             <>
               <TextInput
                 placeholder="Enter Completion OTP"
+                placeholderTextColor={COLORS.placeholder}
                 value={otpComplete}
                 onChangeText={setOtpComplete}
                 style={styles.input}
