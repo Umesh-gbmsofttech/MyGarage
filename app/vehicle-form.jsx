@@ -21,11 +21,11 @@ export default function VehicleForm() {
   const { service, mode, mechanicId } = useLocalSearchParams();
   const { token, user } = useAuth();
 
-  const [vehicleType, setVehicleType] = useState('');
-  const [model, setModel] = useState('');
-  const [fuelType, setFuelType] = useState('');
-  const [issue, setIssue] = useState('');
-  const [result, setResult] = useState(null);
+  const [ vehicleType, setVehicleType ] = useState('');
+  const [ model, setModel ] = useState('');
+  const [ fuelType, setFuelType ] = useState('');
+  const [ issue, setIssue ] = useState('');
+  const [ result, setResult ] = useState(null);
 
   const handleSubmit = async () => {
     if (!vehicleType || !model || !fuelType) {
@@ -34,7 +34,7 @@ export default function VehicleForm() {
     }
 
     if (mode === 'diy') {
-      const guide = defaultGuides[service] || 'Try a basic inspection or search online for guidance.';
+      const guide = defaultGuides[ service ] || 'Try a basic inspection or search online for guidance.';
       setResult({
         guide,
         query: `${vehicleType} ${model} ${fuelType} ${service} troubleshooting`,
@@ -68,41 +68,54 @@ export default function VehicleForm() {
 
   return (
     <AppShell hideChrome hideSupport>
-      <View style={styles.container}>
-        <Text style={styles.heading}>Vehicle Information</Text>
-        <TextInput placeholder="Vehicle Type" style={styles.input} value={vehicleType} onChangeText={setVehicleType} />
-        <TextInput placeholder="Model" style={styles.input} value={model} onChangeText={setModel} />
-        <TextInput placeholder="Fuel Type" style={styles.input} value={fuelType} onChangeText={setFuelType} />
-        {mode !== 'diy' && (
+      <View style={ styles.container }>
+        <Text style={ styles.heading }>Vehicle Information</Text>
+        <TextInput placeholderTextColor="#39a87f" placeholder="Vehicle Type" style={ styles.input } value={ vehicleType } onChangeText={ setVehicleType } />
+        <TextInput placeholderTextColor="#39a87f" placeholder="Model" style={ styles.input } value={ model } onChangeText={ setModel } />
+        <TextInput placeholderTextColor="#39a87f" placeholder="Fuel Type" style={ styles.input } value={ fuelType } onChangeText={ setFuelType } />
+        { mode !== 'diy' && (
           <TextInput
+            placeholderTextColor="#39a87f"
             placeholder="Describe the issue"
-            style={styles.input}
-            value={issue}
-            onChangeText={setIssue}
+            style={ styles.input }
+            value={ issue }
+            onChangeText={ setIssue }
             multiline
           />
-        )}
-        <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}>
-          <Text style={styles.primaryButtonText}>{mode === 'diy' ? 'Get DIY Result' : 'Continue'}</Text>
+        ) }
+        <TouchableOpacity style={ styles.primaryButton } onPress={ handleSubmit }>
+          <Text style={ styles.primaryButtonText }>{ mode === 'diy' ? 'Get DIY Result' : 'Continue' }</Text>
         </TouchableOpacity>
 
-        {result && (
-          <View style={styles.resultCard}>
-            <Text style={styles.resultTitle}>DIY Guidance</Text>
-            <Text style={styles.resultText}>{result.guide}</Text>
-            <TouchableOpacity style={styles.secondaryButton} onPress={handleSearch}>
-              <Text style={styles.secondaryButtonText}>Search Google</Text>
+        { result && (
+          <View style={ styles.resultCard }>
+            <Text style={ styles.resultTitle }>DIY Guidance</Text>
+            <Text style={ styles.resultText }>{ result.guide }</Text>
+            <TouchableOpacity style={ styles.secondaryButton } onPress={ handleSearch }>
+              <Text style={ styles.secondaryButtonText }>Search Google</Text>
             </TouchableOpacity>
           </View>
-        )}
+        ) }
       </View>
     </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 18, gap: 12 },
-  heading: { fontSize: 20, fontWeight: '700', color: '#1F2A24' },
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+    gap: 12,
+  },
+  heading: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1B6B4E',
+    alignSelf: 'center',
+    borderBottomWidth: 3,
+    borderColor: '#167716',
+  },
   input: {
     borderWidth: 1,
     borderColor: '#E4E8E4',

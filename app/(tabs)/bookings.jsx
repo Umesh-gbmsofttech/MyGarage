@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../src/context/AuthContext';
 import api from '../../src/services/api';
@@ -11,23 +11,31 @@ const BookingsScreen = () => {
   const [loading, setLoading] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [error, setError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async (showLoading = true) => {
+    if (!user || !token) return;
+    if (showLoading) setLoading(true);
+    setError('');
+    try {
+      const data = user.role === 'MECHANIC' ? await api.mechanicBookings(token) : await api.ownerBookings(token);
+      setBookings(data);
+    } catch (err) {
+      setError(err.message || 'Failed to load bookings');
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  }, [user, token]);
 
   useEffect(() => {
-    if (!user || !token) return;
-    const load = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const data = user.role === 'MECHANIC' ? await api.mechanicBookings(token) : await api.ownerBookings(token);
-        setBookings(data);
-      } catch (err) {
-        setError(err.message || 'Failed to load bookings');
-      } finally {
-        setLoading(false);
-      }
-    };
     load();
-  }, [user, token]);
+  }, [load]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await load(false);
+    setRefreshing(false);
+  };
 
   const handleRespond = async (bookingId, status) => {
     try {
@@ -44,7 +52,10 @@ const BookingsScreen = () => {
 
   return (
     <AppShell title="My Bookings">
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         {!user && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>You are not logged in</Text>

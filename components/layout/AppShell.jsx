@@ -1,17 +1,41 @@
-import React, { useState } from 'react';
-import { Dimensions, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Dimensions, StyleSheet, TouchableWithoutFeedback, View, StatusBar } from 'react-native';
 import HeaderBar from './HeaderBar';
 import SidebarMenu from './SidebarMenu';
 import SupportFab from '../utility/SupportFab';
+import BottomTabs from './BottomTabs';
 
 const AppShell = ({ children, hideChrome = false, hideSupport = false, title }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [statusHidden, setStatusHidden] = useState(false);
+  const timerRef = useRef(null);
+
+  const resetTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    setStatusHidden(false);
+    timerRef.current = setTimeout(() => {
+      setStatusHidden(true);
+    }, 3000);
+  };
+
+  useEffect(() => {
+    resetTimer();
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onTouchStart={resetTimer}>
+      <StatusBar hidden={statusHidden} />
       {!hideChrome && <HeaderBar onMenuPress={() => setIsMenuOpen(true)} title={title} />}
       <View style={styles.content}>{children}</View>
       {!hideSupport && <SupportFab />}
+      <BottomTabs />
 
       {isMenuOpen && (
         <View style={styles.menuOverlayContainer}>

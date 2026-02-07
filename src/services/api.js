@@ -8,6 +8,8 @@ const api = {
   getProfile: (token) => apiClient.request({ path: '/api/profile/me', token }),
   updateProfile: (token, payload) =>
     apiClient.request({ path: '/api/profile/me', method: 'PUT', token, body: payload }),
+  uploadProfileImage: (token, formData) =>
+    apiClient.request({ path: '/api/profile/upload-avatar', method: 'POST', token, body: formData }),
 
   topRatedMechanics: (limit = 5) => apiClient.request({ path: `/api/mechanics/top-rated?limit=${limit}` }),
   randomMechanics: (limit = 10) => apiClient.request({ path: `/api/mechanics/random?limit=${limit}` }),
@@ -53,6 +55,8 @@ const api = {
   updateAdminSettings: (payload) =>
     apiClient.request({ path: '/api/admin/settings', method: 'PUT', body: payload }),
   adminBanners: () => apiClient.request({ path: '/api/admin/banners' }),
+  uploadBanner: (formData) =>
+    apiClient.request({ path: '/api/admin/banners/upload', method: 'POST', body: formData }),
   createBanner: (payload) => apiClient.request({ path: '/api/admin/banners', method: 'POST', body: payload }),
   updateBanner: (id, payload) => apiClient.request({ path: `/api/admin/banners/${id}`, method: 'PUT', body: payload }),
   deleteBanner: (id) => apiClient.request({ path: `/api/admin/banners/${id}`, method: 'DELETE' }),

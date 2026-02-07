@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../src/context/AuthContext';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import api from '../../src/services/api';
 
 const SignUpScreen = () => {
   const { signupOwner, signupMechanic } = useAuth();
   const router = useRouter();
-  const [role, setRole] = useState('VEHICLE_OWNER');
-  const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState({
+  const [ role, setRole ] = useState('VEHICLE_OWNER');
+  const [ showPassword, setShowPassword ] = useState(false);
+  const [ profileImage, setProfileImage ] = useState(null);
+  const [ form, setForm ] = useState({
     name: '',
     surname: '',
     mobile: '',
@@ -21,7 +24,7 @@ const SignUpScreen = () => {
     shopActive: true,
   });
 
-  const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+  const update = (key, value) => setForm((prev) => ({ ...prev, [ key ]: value }));
 
   const handleSignup = async () => {
     try {
@@ -39,7 +42,16 @@ const SignUpScreen = () => {
           role: 'OWNER',
         };
         console.log('Signup payload:', payload);
-        await signupOwner(payload);
+        const response = await signupOwner(payload);
+        if (profileImage) {
+          const formData = new FormData();
+          formData.append('file', {
+            uri: profileImage.uri,
+            name: profileImage.fileName || 'profile.jpg',
+            type: profileImage.type || 'image/jpeg',
+          });
+          await api.uploadProfileImage(response.token, formData);
+        }
       } else {
         if (!form.name || !form.surname || !form.mobile || !form.email || !form.experience || !form.speciality || !form.city || !form.shopActive) {
           Alert.alert('Error', 'Please fill all fields.');
@@ -58,7 +70,16 @@ const SignUpScreen = () => {
           role: 'MECHANIC',
         };
         console.log('Signup payload:', payload);
-        await signupMechanic(payload);
+        const response = await signupMechanic(payload);
+        if (profileImage) {
+          const formData = new FormData();
+          formData.append('file', {
+            uri: profileImage.uri,
+            name: profileImage.fileName || 'profile.jpg',
+            type: profileImage.type || 'image/jpeg',
+          });
+          await api.uploadProfileImage(response.token, formData);
+        }
       }
       router.replace('/');
     } catch (err) {
@@ -66,59 +87,84 @@ const SignUpScreen = () => {
     }
   };
 
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please allow access to your photos.');
+      return;
+    }
+    const mediaType = ImagePicker.MediaType?.Images || ImagePicker.MediaTypeOptions?.Images;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: mediaType,
+      quality: 0.8,
+    });
+    if (!result.canceled) {
+      setProfileImage(result.assets[ 0 ]);
+    }
+  };
+
   return (
     <AppShell hideChrome hideSupport>
-      <View style={styles.container}>
-        <Text style={styles.title}>Create Account</Text>
-        <View style={styles.roleSwitch}>
+      <View style={ styles.container }>
+        <Text style={ styles.title }>Create Account</Text>
+        <View style={ styles.roleSwitch }>
           <TouchableOpacity
-            style={[styles.roleButton, role === 'VEHICLE_OWNER' && styles.roleButtonActive]}
-            onPress={() => setRole('VEHICLE_OWNER')}
+            style={ [ styles.roleButton, role === 'VEHICLE_OWNER' && styles.roleButtonActive ] }
+            onPress={ () => setRole('VEHICLE_OWNER') }
           >
-            <Text style={[styles.roleText, role === 'VEHICLE_OWNER' && styles.roleTextActive]}>Vehicle Owner</Text>
+            <Text style={ [ styles.roleText, role === 'VEHICLE_OWNER' && styles.roleTextActive ] }>Vehicle Owner</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.roleButton, role === 'MECHANIC' && styles.roleButtonActive]}
-            onPress={() => setRole('MECHANIC')}
+            style={ [ styles.roleButton, role === 'MECHANIC' && styles.roleButtonActive ] }
+            onPress={ () => setRole('MECHANIC') }
           >
-            <Text style={[styles.roleText, role === 'MECHANIC' && styles.roleTextActive]}>Mechanic</Text>
+            <Text style={ [ styles.roleText, role === 'MECHANIC' && styles.roleTextActive ] }>Mechanic</Text>
           </TouchableOpacity>
         </View>
 
-        <TextInput placeholder="Name" value={form.name} onChangeText={(v) => update('name', v)} style={styles.input} />
-        <TextInput placeholder="Surname" value={form.surname} onChangeText={(v) => update('surname', v)} style={styles.input} />
-        <TextInput placeholder="Mobile" value={form.mobile} onChangeText={(v) => update('mobile', v)} style={styles.input} />
-        <TextInput placeholder="Email" value={form.email} onChangeText={(v) => update('email', v)} style={styles.input} />
-        <View style={styles.passwordRow}>
+        <TouchableOpacity style={ styles.imagePicker } onPress={ handlePickImage }>
+          { profileImage ? (
+            <Image source={ { uri: profileImage.uri } } style={ styles.profilePreview } />
+          ) : (
+            <Text style={ styles.imagePickerText }>Select Profile Image</Text>
+          ) }
+        </TouchableOpacity>
+
+        <TextInput placeholderTextColor="#39a87f" placeholder="Name" value={ form.name } onChangeText={ (v) => update('name', v) } style={ styles.input } />
+        <TextInput placeholderTextColor="#39a87f" placeholder="Surname" value={ form.surname } onChangeText={ (v) => update('surname', v) } style={ styles.input } />
+        <TextInput placeholderTextColor="#39a87f" placeholder="Mobile" value={ form.mobile } onChangeText={ (v) => update('mobile', v) } style={ styles.input } />
+        <TextInput placeholderTextColor="#39a87f" placeholder="Email" value={ form.email } onChangeText={ (v) => update('email', v) } style={ styles.input } />
+        <View style={ styles.passwordRow }>
           <TextInput
+            placeholderTextColor="#39a87f"
             placeholder="Password"
-            value={form.password}
-            onChangeText={(v) => update('password', v)}
-            style={[styles.input, styles.passwordInput]}
-            secureTextEntry={!showPassword}
+            value={ form.password }
+            onChangeText={ (v) => update('password', v) }
+            style={ [ styles.input, styles.passwordInput ] }
+            secureTextEntry={ !showPassword }
           />
-          <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword((prev) => !prev)}>
-            <Text style={styles.eyeText}>{showPassword ? 'Hide' : 'Show'}</Text>
+          <TouchableOpacity style={ styles.eyeButton } onPress={ () => setShowPassword((prev) => !prev) }>
+            <Text style={ styles.eyeText }>{ showPassword ? 'Hide' : 'Show' }</Text>
           </TouchableOpacity>
         </View>
 
-        {role === 'MECHANIC' && (
+        { role === 'MECHANIC' && (
           <>
-            <TextInput placeholder="Experience" value={form.experience} onChangeText={(v) => update('experience', v)} style={styles.input} />
-            <TextInput placeholder="Speciality" value={form.speciality} onChangeText={(v) => update('speciality', v)} style={styles.input} />
-            <TextInput placeholder="City" value={form.city} onChangeText={(v) => update('city', v)} style={styles.input} />
-            <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Shop active</Text>
-              <Switch value={form.shopActive} onValueChange={(v) => update('shopActive', v)} />
+            <TextInput placeholder="Experience" value={ form.experience } onChangeText={ (v) => update('experience', v) } style={ styles.input } />
+            <TextInput placeholder="Speciality" value={ form.speciality } onChangeText={ (v) => update('speciality', v) } style={ styles.input } />
+            <TextInput placeholder="City" value={ form.city } onChangeText={ (v) => update('city', v) } style={ styles.input } />
+            <View style={ styles.switchRow }>
+              <Text style={ styles.switchLabel }>Shop active</Text>
+              <Switch value={ form.shopActive } onValueChange={ (v) => update('shopActive', v) } />
             </View>
           </>
-        )}
+        ) }
 
-        <TouchableOpacity style={styles.primaryButton} onPress={handleSignup}>
-          <Text style={styles.primaryButtonText}>Create Account</Text>
+        <TouchableOpacity style={ styles.primaryButton } onPress={ handleSignup }>
+          <Text style={ styles.primaryButtonText }>Create Account</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push('/auth/signin')}>
-          <Text style={styles.link}>Already have an account? Sign in</Text>
+        <TouchableOpacity onPress={ () => router.push('/auth/signin') }>
+          <Text style={ styles.link }>Already have an account? Sign in</Text>
         </TouchableOpacity>
       </View>
     </AppShell>
@@ -135,7 +181,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1F2A24',
+    color: '#1B6B4E',
+    alignSelf: 'center',
+    borderBottomWidth: 3,
+    borderColor: '#167716',
+
   },
   roleSwitch: {
     flexDirection: 'row',
@@ -166,6 +216,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     backgroundColor: '#FFFFFF',
+    color: '#1B6B4E'
   },
   passwordRow: {
     flexDirection: 'row',
@@ -211,6 +262,29 @@ const styles = StyleSheet.create({
     color: '#1B6B4E',
     fontWeight: '600',
     textAlign: 'center',
+  },
+  imagePicker: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 1,
+    borderColor: '#E4E8E4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  profilePreview: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+  },
+  imagePickerText: {
+    fontSize: 12,
+    color: '#1B6B4E',
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingHorizontal: 6,
   },
 });
 

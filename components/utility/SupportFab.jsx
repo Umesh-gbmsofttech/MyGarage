@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     right: 18,
-    bottom: 24,
+    bottom: 84,
     alignItems: 'flex-end',
   },
   fab: {

@@ -1,9 +1,11 @@
 import API_URL from '../../api';
 
 const request = async ({ path, method = 'GET', token, body }) => {
-  const headers = {
-    'Content-Type': 'application/json',
-  };
+  const headers = {};
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
@@ -12,7 +14,7 @@ const request = async ({ path, method = 'GET', token, body }) => {
   const response = await fetch(base, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
   });
 
   if (!response.ok) {

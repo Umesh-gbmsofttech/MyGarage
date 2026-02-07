@@ -7,9 +7,9 @@ import { useRouter } from 'expo-router';
 const SignInScreen = () => {
   const { signin } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [ email, setEmail ] = useState('');
+  const [ password, setPassword ] = useState('');
+  const [ showPassword, setShowPassword ] = useState(false);
 
   const handleSignin = async () => {
     if (!email || !password) {
@@ -26,33 +26,35 @@ const SignInScreen = () => {
 
   return (
     <AppShell hideChrome hideSupport>
-      <View style={styles.container}>
-        <Text style={styles.title}>Sign In</Text>
+      <View style={ styles.container }>
+        <Text style={ styles.title }>Sign In</Text>
         <TextInput
+          placeholderTextColor="#39a87f"
           placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          style={styles.input}
+          value={ email }
+          onChangeText={ setEmail }
+          style={ styles.input }
           keyboardType="email-address"
           autoCapitalize="none"
         />
-        <View style={styles.passwordRow}>
+        <View style={ styles.passwordRow }>
           <TextInput
+            placeholderTextColor="#39a87f"
             placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            style={[styles.input, styles.passwordInput]}
-            secureTextEntry={!showPassword}
+            value={ password }
+            onChangeText={ setPassword }
+            style={ [ styles.input, styles.passwordInput ] }
+            secureTextEntry={ !showPassword }
           />
-          <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword((prev) => !prev)}>
-            <Text style={styles.eyeText}>{showPassword ? 'Hide' : 'Show'}</Text>
+          <TouchableOpacity style={ styles.eyeButton } onPress={ () => setShowPassword((prev) => !prev) }>
+            <Text style={ styles.eyeText }>{ showPassword ? 'Hide' : 'Show' }</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.primaryButton} onPress={handleSignin}>
-          <Text style={styles.primaryButtonText}>Sign In</Text>
+        <TouchableOpacity style={ styles.primaryButton } onPress={ handleSignin }>
+          <Text style={ styles.primaryButtonText }>Sign In</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push('/auth/signup')}>
-          <Text style={styles.link}>Create a new account</Text>
+        <TouchableOpacity onPress={ () => router.push('/auth/signup') }>
+          <Text style={ styles.link }>Create a new account</Text>
         </TouchableOpacity>
       </View>
     </AppShell>
@@ -69,7 +71,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1F2A24',
+    color: '#1B6B4E',
+    alignSelf: 'center',
+    borderBottomWidth: 3,
+    borderColor: '#167716',
   },
   input: {
     borderWidth: 1,

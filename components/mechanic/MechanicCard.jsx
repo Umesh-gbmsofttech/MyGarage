@@ -23,7 +23,7 @@ const MechanicCard = ({ mechanic }) => {
       />
       <Text style={styles.name}>{mechanic.mechName} {mechanic.surname}</Text>
       <Text style={styles.speciality}>{mechanic.expertise || mechanic.speciality || 'General'}</Text>
-      <Text style={styles.rating}>{(mechanic.rating || 0).toFixed(1)} ? ({mechanic.ratingCount || 0})</Text>
+      <Text style={styles.rating}>{(mechanic.rating || 0).toFixed(1)} / ({mechanic.ratingCount || 0})</Text>
       <TouchableOpacity style={styles.bookButton} onPress={handleBook}>
         <Text style={styles.bookButtonText}>Book Now</Text>
       </TouchableOpacity>
