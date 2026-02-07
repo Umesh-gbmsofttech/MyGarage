@@ -12,8 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -21,12 +20,17 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        working-directory: MyGarage
+        working-directory: ./MyGarage
         run: npm ci
 
       - name: Prebuild Android (Expo SDK 54)
-        working-directory: MyGarage
+        working-directory: ./MyGarage
         run: npx expo prebuild --platform android --clean
+
+      - name: Restore Android keystore
+        run: |
+          mkdir -p ./MyGarage/android/app
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > ./MyGarage/android/app/release.keystore
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -34,18 +38,13 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Restore Android keystore
-        run: |
-          mkdir -p MyGarage/android/app
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > MyGarage/android/app/release.keystore
-
       - name: Build signed release APK
         env:
           MYAPP_UPLOAD_STORE_FILE: release.keystore
           MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.MYAPP_UPLOAD_STORE_PASSWORD }}
           MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.MYAPP_UPLOAD_KEY_ALIAS }}
           MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.MYAPP_UPLOAD_KEY_PASSWORD }}
-        working-directory: MyGarage/android
+        working-directory: ./MyGarage/android
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease
@@ -55,4 +54,4 @@ jobs:
         with:
           tag_name: v${{ github.run_number }}
           name: Release v${{ github.run_number }}
-          files: MyGarage/android/app/build/outputs/apk/release/app-release.apk
+          files: ./MyGarage/android/app/build/outputs/apk/release/app-release.apk
