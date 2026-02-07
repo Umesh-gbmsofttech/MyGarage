@@ -18,10 +18,15 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        working-directory: MyGarage
+        run: npm ci
+
+      - name: Prebuild Android (Expo SDK 54)
+        working-directory: MyGarage
+        run: npx expo prebuild --platform android --clean
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -31,8 +36,8 @@ jobs:
 
       - name: Restore Android keystore
         run: |
-          mkdir -p android/app
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+          mkdir -p MyGarage/android/app
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > MyGarage/android/app/release.keystore
 
       - name: Build signed release APK
         env:
@@ -40,8 +45,8 @@ jobs:
           MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.MYAPP_UPLOAD_STORE_PASSWORD }}
           MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.MYAPP_UPLOAD_KEY_ALIAS }}
           MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.MYAPP_UPLOAD_KEY_PASSWORD }}
+        working-directory: MyGarage/android
         run: |
-          cd android
           chmod +x gradlew
           ./gradlew assembleRelease
 
@@ -50,4 +55,4 @@ jobs:
         with:
           tag_name: v${{ github.run_number }}
           name: Release v${{ github.run_number }}
-          files: android/app/build/outputs/apk/release/app-release.apk
+          files: MyGarage/android/app/build/outputs/apk/release/app-release.apk
