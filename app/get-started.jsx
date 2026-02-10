@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppShell from '../components/layout/AppShell';
 import { useRouter } from 'expo-router';
+import COLORS from '../theme/colors';
 
 const GetStartedScreen = () => {
   const router = useRouter();
@@ -40,21 +41,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   skipText: {
-    color: '#1B6B4E',
+    color: COLORS.primary,
     fontWeight: '700',
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1F2A24',
+    color: COLORS.text,
   },
   subtitle: {
     fontSize: 14,
-    color: '#5C6B64',
+    color: COLORS.muted,
     textAlign: 'center',
   },
   primaryButton: {
-    backgroundColor: '#1B6B4E',
+    backgroundColor: COLORS.primary,
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 14,
@@ -65,13 +66,13 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     borderWidth: 1,
-    borderColor: '#1B6B4E',
+    borderColor: COLORS.primary,
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 14,
   },
   secondaryButtonText: {
-    color: '#1B6B4E',
+    color: COLORS.primary,
     fontWeight: '700',
   },
 });

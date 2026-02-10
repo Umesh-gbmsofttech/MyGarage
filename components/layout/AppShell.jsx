@@ -4,6 +4,7 @@ import HeaderBar from './HeaderBar';
 import SidebarMenu from './SidebarMenu';
 import SupportFab from '../utility/SupportFab';
 import BottomTabs from './BottomTabs';
+import COLORS from '../../theme/colors';
 
 const AppShell = ({ children, hideChrome = false, hideSupport = false, title }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -52,7 +53,7 @@ const AppShell = ({ children, hideChrome = false, hideSupport = false, title }) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F6F0',
+    backgroundColor: COLORS.background,
   },
   content: {
     flex: 1,

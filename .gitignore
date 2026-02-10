@@ -1,4 +1,8 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# creating api key for free?
+# https://youtu.be/qRtvAkwoOqM?si=lEz8n2Pb3YkzpUtd
+
+./vscode
+./myGarage-server
 
 # dependencies
 node_modules/
@@ -32,6 +36,10 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+.env.*
+api_keys.txt
+secrets/
 
 # typescript
 *.tsbuildinfo

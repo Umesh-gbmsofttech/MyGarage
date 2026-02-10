@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/context/AuthContext';
+import COLORS from '../../theme/colors';
 
 const MechanicCard = ({ mechanic }) => {
   const router = useRouter();
@@ -34,12 +35,12 @@ const MechanicCard = ({ mechanic }) => {
 const styles = StyleSheet.create({
   card: {
     width: 180,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderRadius: 16,
     padding: 12,
     marginRight: 12,
     borderWidth: 1,
-    borderColor: '#E4E8E4',
+    borderColor: COLORS.border,
   },
   avatar: {
     width: 64,
@@ -52,22 +53,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     textAlign: 'center',
-    color: '#1F2A24',
+    color: COLORS.text,
   },
   speciality: {
     fontSize: 12,
     textAlign: 'center',
-    color: '#5C6B64',
+    color: COLORS.muted,
     marginVertical: 4,
   },
   rating: {
     fontSize: 12,
     textAlign: 'center',
-    color: '#7A847E',
+    color: COLORS.muted,
   },
   bookButton: {
     marginTop: 10,
-    backgroundColor: '#1B6B4E',
+    backgroundColor: COLORS.primary,
     paddingVertical: 8,
     borderRadius: 10,
     alignItems: 'center',

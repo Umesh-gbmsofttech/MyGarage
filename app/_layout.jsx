@@ -3,29 +3,17 @@ import Constants from 'expo-constants';
 import { useEffect, useMemo, useState } from 'react';
 import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
+import COLORS from '../theme/colors';
 
 const RELEASES_LATEST_URL = 'https://github.com/Umesh-gbmsofttech/MyGarage/releases/latest';
 const RELEASES_API_URL = 'https://api.github.com/repos/Umesh-gbmsofttech/MyGarage/releases/latest';
 
-const normalizeVersion = (value) => {
-  if (!value) return '';
-  const match = String(value).trim().replace(/^v/i, '').match(/(\d+(\.\d+){0,3})/);
-  const cleaned = match ? match[1] : '';
-  if (!cleaned.includes('.')) return '';
-  return cleaned;
-};
-
-const compareSemver = (a, b) => {
-  const pa = normalizeVersion(a).split('.').map((n) => parseInt(n, 10) || 0);
-  const pb = normalizeVersion(b).split('.').map((n) => parseInt(n, 10) || 0);
-  const len = Math.max(pa.length, pb.length);
-  for (let i = 0; i < len; i += 1) {
-    const na = pa[i] ?? 0;
-    const nb = pb[i] ?? 0;
-    if (na > nb) return 1;
-    if (na < nb) return -1;
-  }
-  return 0;
+const extractRunNumber = (value) => {
+  if (!value) return null;
+  const match = String(value).trim().replace(/^v/i, '').match(/(\d+)/);
+  if (!match) return null;
+  const parsed = parseInt(match[1], 10);
+  return Number.isNaN(parsed) ? null : parsed;
 };
 
 const AuthGate = ({ children }) => {
@@ -50,13 +38,12 @@ const AuthGate = ({ children }) => {
 const UpdatePrompt = () => {
   const [visible, setVisible] = useState(false);
   const [latestTag, setLatestTag] = useState('');
-  const currentVersion = useMemo(() => {
-    return normalizeVersion(
-      Constants.nativeAppVersion ||
-        Constants.expoConfig?.version ||
-        Constants.manifest?.version ||
-        Constants.manifest2?.extra?.expoClient?.version,
-    );
+  const currentRunNumber = useMemo(() => {
+    const value =
+      Constants.expoConfig?.extra?.buildNumber ||
+      Constants.manifest?.extra?.buildNumber ||
+      Constants.manifest2?.extra?.expoClient?.buildNumber;
+    return extractRunNumber(value);
   }, []);
 
   useEffect(() => {
@@ -68,11 +55,11 @@ const UpdatePrompt = () => {
         });
         if (!response.ok) return;
         const data = await response.json();
-        const tag = normalizeVersion(data?.tag_name);
-        if (!tag || !mounted || !currentVersion) return;
-        if (tag === currentVersion) return;
-        if (compareSemver(tag, currentVersion) > 0) {
-          setLatestTag(tag);
+        const latest = extractRunNumber(data?.tag_name);
+        if (!latest || !mounted || !currentRunNumber) return;
+        if (latest === currentRunNumber) return;
+        if (latest > currentRunNumber) {
+          setLatestTag(`v${latest}`);
           setVisible(true);
         }
       } catch (error) {
@@ -83,7 +70,7 @@ const UpdatePrompt = () => {
     return () => {
       mounted = false;
     };
-  }, [currentVersion]);
+  }, [currentRunNumber]);
 
   const handleDownload = () => {
     setVisible(false);
@@ -150,19 +137,19 @@ const styles = StyleSheet.create({
   updateCard: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: '#ffffff',
+    backgroundColor: COLORS.card,
     borderRadius: 18,
     padding: 20,
   },
   updateTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#121212',
+    color: COLORS.text,
     marginBottom: 6,
   },
   updateSubtitle: {
     fontSize: 14,
-    color: '#4a4a4a',
+    color: COLORS.muted,
     marginBottom: 18,
   },
   updateActions: {
@@ -177,13 +164,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#f2f2f2',
+    backgroundColor: COLORS.background,
   },
   downloadButton: {
-    backgroundColor: '#111111',
+    backgroundColor: COLORS.primary,
   },
   cancelText: {
-    color: '#333333',
+    color: COLORS.text,
     fontWeight: '600',
   },
   downloadText: {

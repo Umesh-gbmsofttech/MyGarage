@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 const getBaseUrl = () => {
   if (__DEV__) {
     const hostUri = Constants.expoConfig?.hostUri;
-    const lanIp = hostUri?.split(':')[ 0 ];
+    const lanIp = hostUri?.split(':')[0];
     return `http://${lanIp}:8080/api`;
   }
 

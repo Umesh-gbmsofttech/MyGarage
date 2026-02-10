@@ -62,6 +62,17 @@ const api = {
   deleteBanner: (id) => apiClient.request({ path: `/api/admin/banners/${id}`, method: 'DELETE' }),
   updateMechanicVisibility: (id, visible) =>
     apiClient.request({ path: `/api/admin/mechanics/${id}/visibility/${visible}`, method: 'PUT' }),
+
+  geminiChat: (message) =>
+    apiClient.request({ path: '/api/gemini/chat', method: 'POST', body: { message } }),
+  mapsReverseGeocode: (lat, lng) =>
+    apiClient.request({ path: `/api/maps/reverse-geocode?lat=${lat}&lng=${lng}` }),
+  mapsGeocode: (address) =>
+    apiClient.request({ path: `/api/maps/geocode?address=${encodeURIComponent(address)}` }),
+  mapsDirections: (origin, destination) => {
+    const params = new URLSearchParams({ origin, destination });
+    return apiClient.request({ path: `/api/maps/directions?${params.toString()}` });
+  },
 };
 
 export default api;

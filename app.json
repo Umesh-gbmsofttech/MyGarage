@@ -24,6 +24,10 @@
       "output": "static",
       "favicon": "./assets/images/MyGarage.jpg"
     },
+    "extra": {
+      "buildNumber": 10,
+      "apiBaseUrl": "https://mygarage-server.onrender.com/api"
+    },
     "plugins": [
       "expo-router",
       "expo-image-picker",

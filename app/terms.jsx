@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import AppShell from '../components/layout/AppShell';
+import COLORS from '../theme/colors';
 
 const TermsScreen = () => {
   return (
@@ -22,11 +23,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1F2A24',
+    color: COLORS.text,
   },
   text: {
     fontSize: 14,
-    color: '#5C6B64',
+    color: COLORS.muted,
   },
 });
 

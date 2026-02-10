@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import api from '../../src/services/api';
+import COLORS from '../../theme/colors';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.7;
@@ -36,7 +37,13 @@ const RatingReviewSection = () => {
     const stars = [];
     for (let i = 1; i <= 5; i += 1) {
       stars.push(
-        <Icon key={i} name={i <= rating ? 'star' : 'star-o'} size={14} color="#fbc02d" style={{ marginRight: 2 }} />
+        <Icon
+          key={i}
+          name={i <= rating ? 'star' : 'star-o'}
+          size={14}
+          color={COLORS.accent}
+          style={{ marginRight: 2 }}
+        />
       );
     }
     return <View style={styles.starRow}>{stars}</View>;
@@ -82,14 +89,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     paddingHorizontal: 15,
     marginBottom: 10,
-    color: '#1F2A24',
+    color: COLORS.text,
   },
   reviewCard: {
     borderRadius: 12,
     padding: 15,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: '#E4E8E4',
+    borderColor: COLORS.border,
   },
   starRow: {
     flexDirection: 'row',
@@ -98,7 +105,7 @@ const styles = StyleSheet.create({
   comment: {
     fontSize: 14,
     marginBottom: 10,
-    color: '#333',
+    color: COLORS.muted,
   },
   reviewerInfo: {
     flexDirection: 'row',
@@ -108,7 +115,7 @@ const styles = StyleSheet.create({
   reviewerName: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#555',
+    color: COLORS.text,
   },
   avatarSmall: {
     width: 26,

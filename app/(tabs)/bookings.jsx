@@ -1,9 +1,22 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../src/context/AuthContext';
 import api from '../../src/services/api';
 import { useRouter } from 'expo-router';
+import COLORS from '../../theme/colors';
+import { Skeleton, SkeletonRow } from '../../components/utility/Skeleton';
+
+const sortBookings = (list) => {
+  return [...list].sort((a, b) => {
+    const timeA = new Date(a.createdAt || a.created_at || a.updatedAt || 0).getTime();
+    const timeB = new Date(b.createdAt || b.created_at || b.updatedAt || 0).getTime();
+    if (!Number.isNaN(timeA) && !Number.isNaN(timeB) && timeA !== timeB) {
+      return timeB - timeA;
+    }
+    return (b.id || 0) - (a.id || 0);
+  });
+};
 
 const BookingsScreen = () => {
   const { user, token } = useAuth();
@@ -11,15 +24,13 @@ const BookingsScreen = () => {
   const [loading, setLoading] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [error, setError] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
-
   const load = useCallback(async (showLoading = true) => {
     if (!user || !token) return;
     if (showLoading) setLoading(true);
     setError('');
     try {
       const data = user.role === 'MECHANIC' ? await api.mechanicBookings(token) : await api.ownerBookings(token);
-      setBookings(data);
+      setBookings(sortBookings(data));
     } catch (err) {
       setError(err.message || 'Failed to load bookings');
     } finally {
@@ -31,17 +42,11 @@ const BookingsScreen = () => {
     load();
   }, [load]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await load(false);
-    setRefreshing(false);
-  };
-
   const handleRespond = async (bookingId, status) => {
     try {
       await api.respondBooking(token, bookingId, { status });
       const updated = user.role === 'MECHANIC' ? await api.mechanicBookings(token) : await api.ownerBookings(token);
-      setBookings(updated);
+      setBookings(sortBookings(updated));
     } catch (err) {
       setError(err.message || 'Failed to respond');
     }
@@ -52,10 +57,7 @@ const BookingsScreen = () => {
 
   return (
     <AppShell title="My Bookings">
-      <ScrollView
-        contentContainerStyle={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
+      <ScrollView contentContainerStyle={styles.container}>
         {!user && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>You are not logged in</Text>
@@ -66,7 +68,17 @@ const BookingsScreen = () => {
           </View>
         )}
 
-        {user && loading && <ActivityIndicator size="large" color="#1B6B4E" />}
+        {user && loading && (
+          <View style={styles.skeletonStack}>
+            {[0, 1, 2].map((item) => (
+              <View key={`booking-skeleton-${item}`} style={styles.card}>
+                <Skeleton height={18} width="45%" />
+                <SkeletonRow lines={3} lineHeight={12} />
+                <Skeleton height={36} width="40%" style={styles.skeletonButton} />
+              </View>
+            ))}
+          </View>
+        )}
 
         {user && !loading && error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -151,21 +163,21 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E4E8E4',
+    borderColor: COLORS.border,
     gap: 12,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1F2A24',
+    color: COLORS.text,
   },
   cardText: {
     fontSize: 13,
-    color: '#4F5D56',
+    color: COLORS.muted,
   },
   cardActions: {
     gap: 10,
@@ -176,14 +188,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1F2A24',
+    color: COLORS.text,
   },
   inlineActions: {
     flexDirection: 'row',
     gap: 10,
   },
   primaryButton: {
-    backgroundColor: '#1B6B4E',
+    backgroundColor: COLORS.primary,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
@@ -194,32 +206,32 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   secondaryButton: {
-    borderColor: '#1B6B4E',
+    borderColor: COLORS.primary,
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 10,
     alignItems: 'center',
   },
   secondaryButtonText: {
-    color: '#1B6B4E',
+    color: COLORS.primary,
     fontWeight: '700',
   },
   acceptButton: {
     flex: 1,
-    backgroundColor: '#1B6B4E',
+    backgroundColor: COLORS.primary,
     paddingVertical: 10,
     borderRadius: 12,
     alignItems: 'center',
   },
   declineButton: {
     flex: 1,
-    backgroundColor: '#D45353',
+    backgroundColor: COLORS.danger,
     paddingVertical: 10,
     borderRadius: 12,
     alignItems: 'center',
   },
   emptyState: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -231,12 +243,18 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 13,
-    color: '#5C6B64',
+    color: COLORS.muted,
     textAlign: 'center',
   },
   error: {
-    color: '#D45353',
+    color: COLORS.danger,
     textAlign: 'center',
+  },
+  skeletonStack: {
+    gap: 12,
+  },
+  skeletonButton: {
+    alignSelf: 'flex-start',
   },
 });
 

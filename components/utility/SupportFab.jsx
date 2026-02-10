@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import COLORS from '../../theme/colors';
 
 const SupportFab = () => {
   const router = useRouter();
@@ -27,15 +28,15 @@ const SupportFab = () => {
       {open && (
         <View style={styles.menu}>
           <TouchableOpacity style={styles.menuItem} onPress={handleCall}>
-            <Ionicons name="call" size={18} color="#0B3B2E" />
+            <Ionicons name="call" size={18} color={COLORS.primary} />
             <Text style={styles.menuText}>Call</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.menuItem} onPress={handleChat}>
-            <Ionicons name="chatbubble-ellipses" size={18} color="#0B3B2E" />
+            <Ionicons name="chatbubble-ellipses" size={18} color={COLORS.primary} />
             <Text style={styles.menuText}>Chat</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.menuItem} onPress={handleDIY}>
-            <Ionicons name="construct" size={18} color="#0B3B2E" />
+            <Ionicons name="construct" size={18} color={COLORS.primary} />
             <Text style={styles.menuText}>DIY Guide</Text>
           </TouchableOpacity>
         </View>
@@ -58,7 +59,7 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: '#1B6B4E',
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -75,7 +76,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 16,
@@ -87,7 +88,7 @@ const styles = StyleSheet.create({
   },
   menuText: {
     fontSize: 14,
-    color: '#1F2A24',
+    color: COLORS.text,
     fontWeight: '600',
   },
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import AppShell from '../components/layout/AppShell';
@@ -7,6 +7,7 @@ import MapScreen from '../components/maps/MapScreen';
 import { useAuth } from '../src/context/AuthContext';
 import api from '../src/services/api';
 import COLORS from '../theme/colors';
+import { Skeleton, SkeletonRow } from '../components/utility/Skeleton';
 
 const BookingScreen = () => {
   const { bookingId } = useLocalSearchParams();
@@ -137,7 +138,12 @@ const BookingScreen = () => {
   return (
     <AppShell hideChrome hideSupport>
       <View style={styles.container}>
-        {loading && <ActivityIndicator size="large" color="#1B6B4E" />}
+        {loading && (
+          <View style={styles.card}>
+            <Skeleton height={18} width="40%" />
+            <SkeletonRow lines={3} lineHeight={12} />
+          </View>
+        )}
         {booking && (
           <View style={styles.card}>
             <Text style={styles.title}>Booking #{booking.id}</Text>
@@ -228,35 +234,36 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E4E8E4',
+    borderColor: COLORS.border,
     gap: 12,
   },
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1F2A24',
+    color: COLORS.text,
   },
   text: {
     fontSize: 13,
-    color: '#4F5D56',
+    color: COLORS.muted,
   },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
+    color: COLORS.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E4E8E4',
+    borderColor: COLORS.border,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: '#FDFCF7',
+    backgroundColor: COLORS.background,
   },
   primaryButton: {
-    backgroundColor: '#1B6B4E',
+    backgroundColor: COLORS.primary,
     paddingVertical: 10,
     borderRadius: 12,
     alignItems: 'center',
@@ -267,13 +274,13 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     borderWidth: 1,
-    borderColor: '#1B6B4E',
+    borderColor: COLORS.primary,
     paddingVertical: 10,
     borderRadius: 12,
     alignItems: 'center',
   },
   secondaryButtonText: {
-    color: '#1B6B4E',
+    color: COLORS.primary,
     fontWeight: '700',
   },
 });

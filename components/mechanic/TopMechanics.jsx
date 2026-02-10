@@ -1,6 +1,7 @@
 import React from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import MechanicCard from './MechanicCard';
+import COLORS from '../../theme/colors';
 
 const TopMechanics = ({ mechanics = [] }) => {
   return (
@@ -26,7 +27,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 10,
-    color: '#1F2A24',
+    color: COLORS.text,
   },
 });
 

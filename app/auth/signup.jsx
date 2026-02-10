@@ -191,10 +191,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1B6B4E',
+    color: COLORS.primary,
     alignSelf: 'center',
     borderBottomWidth: 3,
-    borderColor: '#167716',
+    borderColor: COLORS.primarySoft,
 
   },
   roleSwitch: {
@@ -206,14 +206,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1B6B4E',
+    borderColor: COLORS.primary,
     alignItems: 'center',
   },
   roleButtonActive: {
-    backgroundColor: '#1B6B4E',
+    backgroundColor: COLORS.primary,
   },
   roleText: {
-    color: '#1B6B4E',
+    color: COLORS.primary,
     fontWeight: '700',
   },
   roleTextActive: {
@@ -221,12 +221,12 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E4E8E4',
+    borderColor: COLORS.border,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
-    color: '#1B6B4E'
+    backgroundColor: COLORS.card,
+    color: COLORS.text
   },
   passwordRow: {
     flexDirection: 'row',
@@ -241,11 +241,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E4E8E4',
-    backgroundColor: '#FFFFFF',
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
   },
   eyeText: {
-    color: '#1B6B4E',
+    color: COLORS.primary,
     fontWeight: '700',
   },
   switchRow: {
@@ -256,10 +256,10 @@ const styles = StyleSheet.create({
   switchLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2A24',
+    color: COLORS.text,
   },
   primaryButton: {
-    backgroundColor: '#1B6B4E',
+    backgroundColor: COLORS.primary,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   link: {
-    color: '#1B6B4E',
+    color: COLORS.primary,
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -278,11 +278,11 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 48,
     borderWidth: 1,
-    borderColor: '#E4E8E4',
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
   },
   profilePreview: {
     width: 92,
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   },
   imagePickerText: {
     fontSize: 12,
-    color: '#1B6B4E',
+    color: COLORS.primary,
     fontWeight: '700',
     textAlign: 'center',
     paddingHorizontal: 6,

@@ -8,6 +8,7 @@ import {
     TouchableWithoutFeedback,
     View
 } from 'react-native';
+import COLORS from '../../../theme/colors';
 
 const ChatContactUs = () => {
     const [ menuVisible, setMenuVisible ] = useState(false);
@@ -82,7 +83,7 @@ const styles = StyleSheet.create({
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1D3557',
+        backgroundColor: COLORS.primary,
         paddingVertical: 8,
         paddingHorizontal: 12,
         borderRadius: 25,

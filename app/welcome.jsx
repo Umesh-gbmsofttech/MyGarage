@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppShell from '../components/layout/AppShell';
 import { useRouter } from 'expo-router';
+import COLORS from '../theme/colors';
 
 const WelcomeScreen = () => {
   const router = useRouter();
@@ -35,15 +36,15 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1F2A24',
+    color: COLORS.text,
   },
   subtitle: {
     fontSize: 14,
-    color: '#5C6B64',
+    color: COLORS.muted,
     textAlign: 'center',
   },
   primaryButton: {
-    backgroundColor: '#1B6B4E',
+    backgroundColor: COLORS.primary,
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 14,

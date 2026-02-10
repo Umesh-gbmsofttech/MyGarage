@@ -1,12 +1,14 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import DoItYourselfSection from '../diy/DoItYourselfSection';
 import OurMechanics from '../mechanic/OurMechanics';
 import TopMechanics from '../mechanic/TopMechanics';
 import RatingReviewSection from '../utility/RatingReviewSection';
 import api from '../../src/services/api';
 import BannerCarousel from './BannerCarousel';
+import COLORS from '../../theme/colors';
+import { Skeleton, SkeletonRow } from '../utility/Skeleton';
 
 const Home = () => {
   const router = useRouter();
@@ -16,7 +18,6 @@ const Home = () => {
   const [ topMechanics, setTopMechanics ] = useState([]);
   const [ randomMechanics, setRandomMechanics ] = useState([]);
   const [ banners, setBanners ] = useState([]);
-  const [ refreshing, setRefreshing ] = useState(false);
 
   const load = useCallback(async () => {
     const top = await api.topRatedMechanics(5);
@@ -39,22 +40,18 @@ const Home = () => {
     }
   }, [ params.section ]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await load();
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
   return (
     <ScrollView
       ref={ scrollRef }
       contentContainerStyle={ styles.container }
-      refreshControl={ <RefreshControl refreshing={ refreshing } onRefresh={ onRefresh } /> }
     >
-      <BannerCarousel banners={ banners } />
+      {banners.length > 0 ? (
+        <BannerCarousel banners={ banners } />
+      ) : (
+        <View style={styles.bannerSkeleton}>
+          <Skeleton height={160} width="100%" />
+        </View>
+      )}
       <View style={ styles.hero }>
         <Text style={ styles.heroTitle }>Find trusted mechanics fast</Text>
         <Text style={ styles.heroSubtitle }>Book certified help or solve it yourself.</Text>
@@ -63,8 +60,22 @@ const Home = () => {
         </TouchableOpacity>
       </View>
 
-      <TopMechanics mechanics={ topMechanics } />
-      <OurMechanics mechanics={ randomMechanics } />
+      {topMechanics.length > 0 ? (
+        <TopMechanics mechanics={ topMechanics } />
+      ) : (
+        <View style={styles.sectionSkeleton}>
+          <Skeleton height={18} width="55%" />
+          <SkeletonRow lines={3} lineHeight={12} />
+        </View>
+      )}
+      {randomMechanics.length > 0 ? (
+        <OurMechanics mechanics={ randomMechanics } />
+      ) : (
+        <View style={styles.sectionSkeleton}>
+          <Skeleton height={18} width="45%" />
+          <SkeletonRow lines={3} lineHeight={12} />
+        </View>
+      )}
 
       <View ref={ diyRef }>
         <DoItYourselfSection />
@@ -83,7 +94,7 @@ const styles = StyleSheet.create({
     margin: 18,
     padding: 20,
     borderRadius: 20,
-    backgroundColor: '#0B3B2E',
+    backgroundColor: COLORS.primary,
   },
   heroTitle: {
     fontSize: 20,
@@ -92,20 +103,29 @@ const styles = StyleSheet.create({
   },
   heroSubtitle: {
     fontSize: 13,
-    color: '#DDE8E1',
+    color: '#E6EEF6',
     marginTop: 6,
   },
   heroButton: {
     marginTop: 14,
-    backgroundColor: '#FDFCF7',
+    backgroundColor: COLORS.accent,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 12,
     alignSelf: 'flex-start',
   },
   heroButtonText: {
-    color: '#0B3B2E',
+    color: COLORS.primary,
     fontWeight: '700',
+  },
+  bannerSkeleton: {
+    paddingHorizontal: 18,
+    paddingTop: 18,
+  },
+  sectionSkeleton: {
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    gap: 10,
   },
 });
 

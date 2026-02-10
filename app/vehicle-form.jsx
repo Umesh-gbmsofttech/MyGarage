@@ -112,20 +112,20 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1B6B4E',
+    color: COLORS.primary,
     alignSelf: 'center',
     borderBottomWidth: 3,
-    borderColor: '#167716',
+    borderColor: COLORS.primarySoft,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E4E8E4',
+    borderColor: COLORS.border,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
   },
   primaryButton: {
-    backgroundColor: '#1B6B4E',
+    backgroundColor: COLORS.primary,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
@@ -135,9 +135,9 @@ const styles = StyleSheet.create({
     marginTop: 12,
     padding: 16,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: '#E4E8E4',
+    borderColor: COLORS.border,
     gap: 10,
   },
   resultTitle: {
@@ -146,17 +146,17 @@ const styles = StyleSheet.create({
   },
   resultText: {
     fontSize: 13,
-    color: '#4F5D56',
+    color: COLORS.muted,
   },
   secondaryButton: {
     borderWidth: 1,
-    borderColor: '#1B6B4E',
+    borderColor: COLORS.primary,
     paddingVertical: 10,
     borderRadius: 12,
     alignItems: 'center',
   },
   secondaryButtonText: {
-    color: '#1B6B4E',
+    color: COLORS.primary,
     fontWeight: '700',
   },
 });

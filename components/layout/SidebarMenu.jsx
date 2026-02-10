@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import COLORS from '../../theme/colors';
 
 const menuItems = [
   { icon: 'calendar-outline', label: 'Book Now', route: '/book-now' },
@@ -24,14 +25,14 @@ const SidebarMenu = ({ onClose }) => {
 
   return (
     <View style={ styles.panel }>
-      <LinearGradient colors={ [ '#37ffca', '#1e4ca8' ] } style={ styles.brand }>
+      <LinearGradient colors={ [ COLORS.primarySoft, COLORS.primary ] } style={ styles.brand }>
         {/* <Image source={ require('../../assets/images/MyGarage.png') } style={ styles.logo } /> */ }
         <Text style={ styles.brandText }>MyGarage</Text>
       </LinearGradient>
       <ScrollView contentContainerStyle={ styles.menu }>
         { menuItems.map((item) => (
           <TouchableOpacity key={ item.label } style={ styles.menuItem } onPress={ () => handlePress(item.route) }>
-            <Ionicons name={ item.icon } size={ 20 } color="#0B3B2E" />
+            <Ionicons name={ item.icon } size={ 20 } color={COLORS.primary} />
             <Text style={ styles.menuText }>{ item.label }</Text>
           </TouchableOpacity>
         )) }
@@ -44,7 +45,7 @@ const styles = StyleSheet.create({
   panel: {
     width: '78%',
     height: '100%',
-    backgroundColor: '#FDFCF7',
+    backgroundColor: COLORS.background,
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 0 },
     shadowOpacity: 0.15,
@@ -64,7 +65,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   brandText: {
-    color: '#FDFCF7',
+    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '700',
   },
@@ -78,13 +79,13 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: '#E7ECE7',
+    borderColor: COLORS.border,
   },
   menuText: {
     fontSize: 15,
-    color: '#1F2A24',
+    color: COLORS.text,
     fontWeight: '600',
   },
 });

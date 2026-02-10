@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import AppShell from '../components/layout/AppShell';
 import MechanicCard from '../components/mechanic/MechanicCard';
 import api from '../src/services/api';
 import * as Location from 'expo-location';
 import COLORS from '../theme/colors';
+import { Skeleton, SkeletonRow } from '../components/utility/Skeleton';
 
 const SearchScreen = () => {
   const [query, setQuery] = useState('');
@@ -71,7 +72,16 @@ const SearchScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {loading && <ActivityIndicator size="large" color="#1B6B4E" />}
+        {loading && (
+          <View style={styles.skeletonGrid}>
+            {[0, 1, 2, 3].map((item) => (
+              <View key={`mechanic-skeleton-${item}`} style={styles.skeletonCard}>
+                <Skeleton height={70} width="100%" />
+                <SkeletonRow lines={2} lineHeight={12} />
+              </View>
+            ))}
+          </View>
+        )}
 
         <View style={styles.results}>
           {mechanics.map((mechanic) => (
@@ -95,13 +105,13 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#E4E8E4',
+    borderColor: COLORS.border,
     borderRadius: 12,
     paddingHorizontal: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
   },
   searchButton: {
-    backgroundColor: '#1B6B4E',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 14,
     borderRadius: 12,
     justifyContent: 'center',
@@ -117,23 +127,32 @@ const styles = StyleSheet.create({
   },
   filterLabel: {
     fontSize: 14,
-    color: '#4F5D56',
+    color: COLORS.muted,
   },
   filterButton: {
-    borderColor: '#1B6B4E',
+    borderColor: COLORS.primary,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
   },
   filterButtonText: {
-    color: '#1B6B4E',
+    color: COLORS.primary,
     fontWeight: '600',
   },
   results: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+  },
+  skeletonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  skeletonCard: {
+    width: '47%',
+    gap: 10,
   },
 });
 

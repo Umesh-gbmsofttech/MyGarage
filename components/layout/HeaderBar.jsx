@@ -3,14 +3,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import COLORS from '../../theme/colors';
 
 const HeaderBar = ({ onMenuPress, title = 'MyGarage' }) => {
   const router = useRouter();
 
   return (
-    <LinearGradient colors={['#E9F5E1', '#FDFCF7']} style={styles.container}>
+    <LinearGradient colors={[COLORS.accent, COLORS.background]} style={styles.container}>
       <TouchableOpacity onPress={onMenuPress} style={styles.iconButton}>
-        <Ionicons name="menu" size={24} color="#0B3B2E" />
+        <Ionicons name="menu" size={24} color={COLORS.primary} />
       </TouchableOpacity>
       <View style={styles.titleWrap}>
         <Text style={styles.title}>{title}</Text>
@@ -18,10 +19,10 @@ const HeaderBar = ({ onMenuPress, title = 'MyGarage' }) => {
       </View>
       <View style={styles.actions}>
         <TouchableOpacity onPress={() => router.push('/my-bookings')} style={styles.iconButton}>
-          <Ionicons name="notifications-outline" size={22} color="#0B3B2E" />
+          <Ionicons name="notifications-outline" size={22} color={COLORS.primary} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.push('/profile')} style={styles.iconButton}>
-          <Ionicons name="person-circle-outline" size={24} color="#0B3B2E" />
+          <Ionicons name="person-circle-outline" size={24} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
     </LinearGradient>
@@ -44,12 +45,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0B3B2E',
+    color: COLORS.primary,
     letterSpacing: 0.4,
   },
   subtitle: {
     fontSize: 12,
-    color: '#5B6B62',
+    color: COLORS.muted,
   },
   actions: {
     flexDirection: 'row',
@@ -59,7 +60,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

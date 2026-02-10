@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import MapView, { Marker, UrlTile } from 'react-native-maps';
 import * as Location from 'expo-location';
-import Constants from 'expo-constants';
+import COLORS from '../../theme/colors';
+import { Skeleton } from '../utility/Skeleton';
+import api from '../../src/services/api';
 
 const haversine = (lat1, lon1, lat2, lon2) => {
   const R = 6371;
@@ -20,10 +22,7 @@ const haversine = (lat1, lon1, lat2, lon2) => {
 
 const MapScreen = ({ ownerLocation, mechanicLocation }) => {
   const [currentLocation, setCurrentLocation] = useState(null);
-  const apiKey =
-    Constants.expoConfig?.android?.config?.googleMaps?.apiKey ||
-    Constants.manifest?.android?.config?.googleMaps?.apiKey ||
-    Constants.manifest2?.extra?.expoClient?.android?.config?.googleMaps?.apiKey;
+  const [areaLabel, setAreaLabel] = useState('');
 
   useEffect(() => {
     const getUserLocation = async () => {
@@ -58,16 +57,33 @@ const MapScreen = ({ ownerLocation, mechanicLocation }) => {
   }, [ownerLocation, mechanicLocation]);
 
   if (!mapCenter) {
-    return <Text style={styles.loading}>Loading map...</Text>;
+    return (
+      <View style={styles.skeletonContainer}>
+        <Skeleton height={200} width="100%" style={styles.skeletonMap} />
+        <Skeleton height={14} width="60%" />
+      </View>
+    );
   }
-  if (!apiKey) {
-    return <Text style={styles.loading}>Map unavailable (missing Google Maps API key).</Text>;
-  }
+  useEffect(() => {
+    const fetchArea = async () => {
+      if (!mapCenter) return;
+      try {
+        const data = await api.mapsReverseGeocode(mapCenter.latitude, mapCenter.longitude);
+        if (data?.formattedAddress) {
+          setAreaLabel(data.formattedAddress);
+        }
+      } catch (error) {
+        // ignore map lookup errors
+      }
+    };
+    fetchArea();
+  }, [mapCenter]);
 
   return (
     <View style={styles.container}>
       <MapView
         style={styles.map}
+        mapType="none"
         initialRegion={{
           latitude: mapCenter.latitude,
           longitude: mapCenter.longitude,
@@ -79,13 +95,14 @@ const MapScreen = ({ ownerLocation, mechanicLocation }) => {
           urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
           maximumZ={19}
         />
-        {currentLocation && <Marker coordinate={currentLocation} title="You" pinColor="#1B6B4E" />}
-        {ownerLocation && <Marker coordinate={ownerLocation} title="Vehicle Owner" pinColor="#0B3B2E" />}
-        {mechanicLocation && <Marker coordinate={mechanicLocation} title="Mechanic" pinColor="#D45353" />}
+        {currentLocation && <Marker coordinate={currentLocation} title="You" pinColor={COLORS.success} />}
+        {ownerLocation && <Marker coordinate={ownerLocation} title="Vehicle Owner" pinColor={COLORS.primary} />}
+        {mechanicLocation && <Marker coordinate={mechanicLocation} title="Mechanic" pinColor={COLORS.accentWarm} />}
       </MapView>
-      {distanceKm && (
+      {(distanceKm || areaLabel) && (
         <View style={styles.infoBox}>
-          <Text>Distance: {distanceKm.toFixed(2)} km</Text>
+          {distanceKm ? <Text>Distance: {distanceKm.toFixed(2)} km</Text> : null}
+          {areaLabel ? <Text numberOfLines={1}>{areaLabel}</Text> : null}
           <Text>Live tracking active</Text>
         </View>
       )}
@@ -105,16 +122,22 @@ const styles = StyleSheet.create({
   },
   loading: {
     textAlign: 'center',
-    color: '#5C6B64',
+    color: COLORS.muted,
   },
   infoBox: {
     padding: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     position: 'absolute',
     bottom: 0,
     width: '100%',
     borderTopWidth: 1,
-    borderTopColor: '#E4E8E4',
+    borderTopColor: COLORS.border,
+  },
+  skeletonContainer: {
+    gap: 10,
+  },
+  skeletonMap: {
+    borderRadius: 16,
   },
 });
 

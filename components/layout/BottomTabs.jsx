@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import COLORS from '../../theme/colors';
 
 const BottomTabs = () => {
   const router = useRouter();
@@ -20,7 +21,7 @@ const BottomTabs = () => {
         const isActive = current === item.key;
         return (
           <TouchableOpacity key={item.key} style={styles.tab} onPress={() => router.push(item.route)}>
-            <Icon name={item.icon} size={22} color={isActive ? '#1B6B4E' : '#8A8A8A'} />
+            <Icon name={item.icon} size={22} color={isActive ? COLORS.primary : COLORS.muted} />
             <Text style={[styles.label, isActive && styles.labelActive]}>{item.label}</Text>
           </TouchableOpacity>
         );
@@ -36,8 +37,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: '#E4E8E4',
-    backgroundColor: '#FFFFFF',
+    borderTopColor: COLORS.border,
+    backgroundColor: COLORS.card,
   },
   tab: {
     alignItems: 'center',
@@ -45,11 +46,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 11,
-    color: '#8A8A8A',
+    color: COLORS.muted,
     fontWeight: '600',
   },
   labelActive: {
-    color: '#1B6B4E',
+    color: COLORS.primary,
   },
 });
 

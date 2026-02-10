@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import COLORS from '../../theme/colors';
 
 const services = [
   { id: '1', name: 'Regular Services', icon: require('../../assets/images/diy/regularService.png'), route: 'regular' },
@@ -38,7 +39,7 @@ export default DoItYourselfSection;
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 18, marginVertical: 10 },
-  title: { fontSize: 18, fontWeight: '700', marginBottom: 12, color: '#1F2A24' },
+  title: { fontSize: 18, fontWeight: '700', marginBottom: 12, color: COLORS.text },
   servicesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -48,12 +49,12 @@ const styles = StyleSheet.create({
     width: '48%',
     alignItems: 'center',
     marginBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     padding: 14,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E4E8E4',
+    borderColor: COLORS.border,
   },
   icon: { width: 50, height: 50, marginBottom: 8, resizeMode: 'contain' },
-  serviceName: { textAlign: 'center', fontSize: 12, fontWeight: '600', color: '#4F5D56' },
+  serviceName: { textAlign: 'center', fontSize: 12, fontWeight: '600', color: COLORS.muted },
 });

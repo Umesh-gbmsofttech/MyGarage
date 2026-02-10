@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Modal, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import AppShell from '../../../components/layout/AppShell';
 import { useAuth } from '../../../src/context/AuthContext';
 import api from '../../../src/services/api';
 import { useRouter } from 'expo-router';
 import API_BASE from '../../../api';
 import COLORS from '../../../theme/colors';
+import { Skeleton, SkeletonRow } from '../../../components/utility/Skeleton';
 
 const ProfileScreen = () => {
   const router = useRouter();
@@ -85,16 +86,6 @@ const ProfileScreen = () => {
       loadProfile();
     }
   }, [ token, loadProfile ]);
-
-  const [ refreshing, setRefreshing ] = useState(false);
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await loadProfile();
-    } finally {
-      setRefreshing(false);
-    }
-  };
 
   const handleSave = async () => {
     try {
@@ -208,11 +199,13 @@ const ProfileScreen = () => {
 
   return (
     <AppShell hideChrome>
-      <ScrollView
-        contentContainerStyle={ styles.container }
-        refreshControl={ <RefreshControl refreshing={ refreshing } onRefresh={ onRefresh } /> }
-      >
-        { loading && <ActivityIndicator size="large" color="#1B6B4E" /> }
+      <ScrollView contentContainerStyle={ styles.container }>
+        { loading && (
+          <View style={ styles.card }>
+            <Skeleton height={60} width={60} style={ styles.profileAvatarPlaceholder } />
+            <SkeletonRow lines={3} lineHeight={12} />
+          </View>
+        ) }
         { error ? <Text style={ styles.error }>{ error }</Text> : null }
 
         { profile && (
@@ -498,27 +491,27 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E4E8E4',
+    borderColor: COLORS.border,
     gap: 12,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1F2A24',
+    color: COLORS.text,
   },
   subTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1F2A24',
+    color: COLORS.text,
   },
   roleTag: {
     alignSelf: 'flex-start',
-    backgroundColor: '#E9F5E1',
-    color: '#1B6B4E',
+    backgroundColor: '#EAF1F7',
+    color: COLORS.primary,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
@@ -526,12 +519,12 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E4E8E4',
+    borderColor: COLORS.border,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    backgroundColor: '#FDFCF7',
+    backgroundColor: COLORS.background,
   },
   profileRow: {
     flexDirection: 'row',
@@ -552,15 +545,15 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#E4E8E4',
+    backgroundColor: COLORS.border,
   },
   profileLabel: {
     fontSize: 13,
-    color: '#4F5D56',
+    color: COLORS.muted,
   },
   profileValue: {
     fontSize: 13,
-    color: '#1F2A24',
+    color: COLORS.text,
     fontWeight: '600',
   },
   modalBackdrop: {
@@ -570,7 +563,7 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderRadius: 16,
     padding: 16,
     gap: 10,
@@ -589,7 +582,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   primaryButton: {
-    backgroundColor: '#1B6B4E',
+    backgroundColor: COLORS.primary,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
@@ -601,26 +594,26 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   secondaryButton: {
-    borderColor: '#1B6B4E',
+    borderColor: COLORS.primary,
     borderWidth: 1,
     paddingVertical: 10,
     borderRadius: 12,
     alignItems: 'center',
   },
   secondaryButtonText: {
-    color: '#1B6B4E',
+    color: COLORS.primary,
     fontWeight: '700',
     paddingVertical: 2,
     paddingHorizontal: 10,
   },
   divider: {
     height: 1,
-    backgroundColor: '#E4E8E4',
+    backgroundColor: COLORS.border,
   },
   bannerRow: {
     padding: 10,
     borderWidth: 1,
-    borderColor: '#E4E8E4',
+    borderColor: COLORS.border,
     borderRadius: 12,
     gap: 10,
     flexDirection: 'row',
@@ -643,23 +636,23 @@ const styles = StyleSheet.create({
   reviewRow: {
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E4E8E4',
+    borderBottomColor: COLORS.border,
   },
   reviewText: {
     fontSize: 13,
-    color: '#4F5D56',
+    color: COLORS.muted,
   },
   reviewMeta: {
     fontSize: 12,
-    color: '#1B6B4E',
+    color: COLORS.primary,
     fontWeight: '700',
   },
   link: {
-    color: '#1B6B4E',
+    color: COLORS.primary,
     fontWeight: '600',
   },
   linkDanger: {
-    color: '#D45353',
+    color: COLORS.danger,
     fontWeight: '600',
   },
   emptyState: {
@@ -675,11 +668,11 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#5C6B64',
+    color: COLORS.muted,
     textAlign: 'center',
   },
   error: {
-    color: '#D45353',
+    color: COLORS.danger,
     textAlign: 'center',
   },
 });

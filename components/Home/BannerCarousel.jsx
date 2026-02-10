@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { FlatList, Image, StyleSheet, View } from 'react-native';
 import API_BASE from '../../api';
+import COLORS from '../../theme/colors';
 
 const BannerCarousel = ({ banners = [] }) => {
   const listRef = useRef(null);
@@ -48,8 +49,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#E4E8E4',
-    backgroundColor: '#FFFFFF',
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
   },
   slide: {
     width: 320,
