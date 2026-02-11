@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import MapView, { Marker, UrlTile } from 'react-native-maps';
 import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../src/context/AuthContext';
 import COLORS from '../../theme/colors';
@@ -33,15 +32,6 @@ const FAQS = [
   },
 ];
 
-const findFaqAnswer = (message) => {
-  const lowered = message.toLowerCase();
-  if (lowered.includes('book')) return FAQS[0].answer;
-  if (lowered.includes('profile') || lowered.includes('update')) return FAQS[1].answer;
-  if (lowered.includes('pay') || lowered.includes('payment') || lowered.includes('price')) return FAQS[2].answer;
-  if (lowered.includes('track') || lowered.includes('location')) return FAQS[3].answer;
-  return null;
-};
-
 const SupportChatScreen = () => {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
@@ -63,15 +53,9 @@ const SupportChatScreen = () => {
     setMessages((prev) => [...prev, outgoing]);
     setInput('');
 
-    const faqAnswer = findFaqAnswer(text);
-    if (faqAnswer) {
-      setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, from: 'bot', text: faqAnswer }]);
-      return;
-    }
-
     try {
       setSending(true);
-      const data = await api.geminiChat(text);
+      const data = await api.chat(text);
       const reply = data?.reply || 'Thanks! How else can I help?';
       setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, from: 'bot', text: reply }]);
     } catch (error) {
@@ -91,30 +75,6 @@ const SupportChatScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.mapCard}>
-            <Text style={styles.sectionTitle}>MyGarage Service Hub</Text>
-            <MapView
-              style={styles.map}
-              mapType="none"
-              initialRegion={{
-                latitude: 19.076,
-                longitude: 72.8777,
-                latitudeDelta: 0.08,
-                longitudeDelta: 0.08,
-              }}
-            >
-              <UrlTile
-                urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-                maximumZ={19}
-              />
-              <Marker
-                coordinate={{ latitude: 19.076, longitude: 72.8777 }}
-                title="MyGarage HQ"
-                description="Support & service hub"
-              />
-            </MapView>
-          </View>
-
           <View style={styles.chatCard}>
             <View style={styles.chipsRow}>
               {FAQS.map((item) => (
@@ -170,24 +130,6 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 16,
     paddingBottom: 120,
-  },
-  mapCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  map: {
-    width: '100%',
-    height: 160,
-    borderRadius: 14,
   },
   chatCard: {
     backgroundColor: COLORS.card,

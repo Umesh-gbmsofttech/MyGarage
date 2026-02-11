@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as Location from 'expo-location';
 import AppShell from '../components/layout/AppShell';
 import MapScreen from '../components/maps/MapScreen';
 import { useAuth } from '../src/context/AuthContext';
@@ -18,8 +17,9 @@ const BookingScreen = () => {
   const [otpMeet, setOtpMeet] = useState('');
   const [otpComplete, setOtpComplete] = useState('');
   const [locations, setLocations] = useState([]);
-  const [locationEnabled, setLocationEnabled] = useState(false);
+  const [liveRiderLocation, setLiveRiderLocation] = useState(null);
   const [prompted, setPrompted] = useState(false);
+  const isMechanic = useMemo(() => user?.role === 'MECHANIC', [user]);
 
   const loadBooking = async () => {
     if (!token || !user) return;
@@ -35,24 +35,12 @@ const BookingScreen = () => {
     }
   };
 
-  const requestLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    setLocationEnabled(status === 'granted');
-  };
-
   const pushLocation = async () => {
-    if (!locationEnabled || !token || !bookingId) return;
+    if (!liveRiderLocation || !token || !bookingId) return;
     try {
-      let current = null;
-      try {
-        current = await Location.getCurrentPositionAsync({});
-      } catch (error) {
-        current = await Location.getLastKnownPositionAsync({});
-      }
-      if (!current) return;
       await api.updateLocation(token, bookingId, {
-        latitude: current.coords.latitude,
-        longitude: current.coords.longitude,
+        latitude: liveRiderLocation.latitude,
+        longitude: liveRiderLocation.longitude,
       });
     } catch (error) {
       // ignore location errors
@@ -78,17 +66,23 @@ const BookingScreen = () => {
   }, [token, bookingId]);
 
   useEffect(() => {
-    if (!booking) return;
+    if (!booking) return undefined;
     if (booking.status === 'ACCEPTED' || booking.status === 'IN_PROGRESS') {
-      requestLocation();
-      const interval = setInterval(async () => {
-        await pushLocation();
-        await loadLocations();
-      }, 5000);
+      loadLocations();
+      const interval = setInterval(loadLocations, 5000);
       return () => clearInterval(interval);
     }
     return undefined;
-  }, [booking, locationEnabled]);
+  }, [booking, token, bookingId]);
+
+  useEffect(() => {
+    if (!booking || !isMechanic) return undefined;
+    if (booking.status === 'ACCEPTED' || booking.status === 'IN_PROGRESS') {
+      const interval = setInterval(pushLocation, 5000);
+      return () => clearInterval(interval);
+    }
+    return undefined;
+  }, [booking, isMechanic, liveRiderLocation, token, bookingId]);
 
   useEffect(() => {
     if (booking?.status === 'COMPLETED' && booking?.completeVerified && !prompted) {
@@ -133,7 +127,17 @@ const BookingScreen = () => {
 
   const ownerLocation = locations.find((loc) => String(loc.user.id) === String(booking?.ownerId));
   const mechanicLocation = locations.find((loc) => String(loc.user.id) === String(booking?.mechanicId));
-  const isMechanic = useMemo(() => user?.role === 'MECHANIC', [user]);
+  const riderLocation = isMechanic
+    ? (liveRiderLocation || (mechanicLocation ? { latitude: mechanicLocation.latitude, longitude: mechanicLocation.longitude } : null))
+    : (mechanicLocation ? { latitude: mechanicLocation.latitude, longitude: mechanicLocation.longitude } : null);
+  const destinationLocation = ownerLocation
+    ? { latitude: ownerLocation.latitude, longitude: ownerLocation.longitude }
+    : null;
+
+  const handleRiderLocationUpdate = useCallback((location) => {
+    if (!isMechanic) return;
+    setLiveRiderLocation(location);
+  }, [isMechanic]);
 
   return (
     <AppShell hideChrome hideSupport>
@@ -153,21 +157,13 @@ const BookingScreen = () => {
           </View>
         )}
 
-        {!locationEnabled && booking?.status === 'ACCEPTED' && (
-          <View style={styles.card}>
-            <Text style={styles.text}>Location is required for live tracking.</Text>
-            <TouchableOpacity style={styles.primaryButton} onPress={requestLocation}>
-              <Text style={styles.primaryButtonText}>Enable Location</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
         {(booking?.status === 'ACCEPTED' || booking?.status === 'IN_PROGRESS') && (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Live Tracking</Text>
             <MapScreen
-              ownerLocation={ownerLocation ? { latitude: ownerLocation.latitude, longitude: ownerLocation.longitude } : null}
-              mechanicLocation={mechanicLocation ? { latitude: mechanicLocation.latitude, longitude: mechanicLocation.longitude } : null}
+              riderLocation={riderLocation}
+              destinationLocation={destinationLocation}
+              onRiderLocationUpdate={handleRiderLocationUpdate}
             />
           </View>
         )}

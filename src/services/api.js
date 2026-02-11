@@ -63,16 +63,12 @@ const api = {
   updateMechanicVisibility: (id, visible) =>
     apiClient.request({ path: `/api/admin/mechanics/${id}/visibility/${visible}`, method: 'PUT' }),
 
-  geminiChat: (message) =>
-    apiClient.request({ path: '/api/gemini/chat', method: 'POST', body: { message } }),
-  mapsReverseGeocode: (lat, lng) =>
-    apiClient.request({ path: `/api/maps/reverse-geocode?lat=${lat}&lng=${lng}` }),
-  mapsGeocode: (address) =>
-    apiClient.request({ path: `/api/maps/geocode?address=${encodeURIComponent(address)}` }),
-  mapsDirections: (origin, destination) => {
-    const params = new URLSearchParams({ origin, destination });
-    return apiClient.request({ path: `/api/maps/directions?${params.toString()}` });
-  },
+  chat: (message) =>
+    apiClient.request({ path: '/api/chat', method: 'POST', body: { message } }),
+  mapsConfig: () =>
+    apiClient.request({ path: '/api/maps/config' }),
+  mapsDirections: (payload) =>
+    apiClient.request({ path: '/api/maps/directions', method: 'POST', body: payload }),
 };
 
 export default api;
