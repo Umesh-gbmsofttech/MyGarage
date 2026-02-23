@@ -1,7 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { FlatList, Image, StyleSheet, View } from 'react-native';
+import { Dimensions, FlatList, Image, StyleSheet, View } from 'react-native';
 import API_BASE from '../../api';
 import COLORS from '../../theme/colors';
+
+const { width } = Dimensions.get('window');
+const BANNER_WIDTH = width - 32;
+const BANNER_HEIGHT = (BANNER_WIDTH * 9) / 16;
 
 const BannerCarousel = ({ banners = [] }) => {
   const listRef = useRef(null);
@@ -53,8 +57,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
   },
   slide: {
-    width: 320,
-    height: 160,
+    width: BANNER_WIDTH,
+    height: BANNER_HEIGHT,
   },
   image: {
     width: '100%',

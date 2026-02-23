@@ -34,6 +34,8 @@ const api = {
     apiClient.request({ path: `/api/bookings/${id}/verify-complete-otp`, method: 'POST', token, body: payload }),
   generateCompleteOtp: (token, id) =>
     apiClient.request({ path: `/api/bookings/${id}/generate-complete-otp`, method: 'POST', token }),
+  bookingSummary: (token, id) =>
+    apiClient.request({ path: `/api/bookings/${id}/summary`, token }),
   ownerBookings: (token) => apiClient.request({ path: '/api/bookings/owner', token }),
   mechanicBookings: (token) => apiClient.request({ path: '/api/bookings/mechanic', token }),
 
@@ -44,6 +46,8 @@ const api = {
     apiClient.request({ path: `/api/locations/bookings/${bookingId}`, method: 'POST', token, body: payload }),
   getLocations: (token, bookingId) =>
     apiClient.request({ path: `/api/locations/bookings/${bookingId}`, token }),
+  getLiveLocation: (token, bookingId) =>
+    apiClient.request({ path: `/api/live-location/${bookingId}`, token }),
 
   notifications: (token) => apiClient.request({ path: '/api/notifications', token }),
 
@@ -57,8 +61,6 @@ const api = {
   adminBanners: () => apiClient.request({ path: '/api/admin/banners' }),
   uploadBanner: (formData) =>
     apiClient.request({ path: '/api/admin/banners/upload', method: 'POST', body: formData }),
-  createBanner: (payload) => apiClient.request({ path: '/api/admin/banners', method: 'POST', body: payload }),
-  updateBanner: (id, payload) => apiClient.request({ path: `/api/admin/banners/${id}`, method: 'PUT', body: payload }),
   deleteBanner: (id) => apiClient.request({ path: `/api/admin/banners/${id}`, method: 'DELETE' }),
   updateMechanicVisibility: (id, visible) =>
     apiClient.request({ path: `/api/admin/mechanics/${id}/visibility/${visible}`, method: 'PUT' }),

@@ -12,18 +12,20 @@ const BookingScreen = () => {
   const { bookingId } = useLocalSearchParams();
   const router = useRouter();
   const { user, token } = useAuth();
-  const [booking, setBooking] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [otpMeet, setOtpMeet] = useState('');
-  const [otpComplete, setOtpComplete] = useState('');
-  const [locations, setLocations] = useState([]);
-  const [liveRiderLocation, setLiveRiderLocation] = useState(null);
-  const [prompted, setPrompted] = useState(false);
-  const isMechanic = useMemo(() => user?.role === 'MECHANIC', [user]);
+  const [ booking, setBooking ] = useState(null);
+  const [ loading, setLoading ] = useState(false);
+  const [ otpMeet, setOtpMeet ] = useState('');
+  const [ otpComplete, setOtpComplete ] = useState('');
+  const [ locations, setLocations ] = useState([]);
+  const [ liveRiderLocation, setLiveRiderLocation ] = useState(null);
+  const [ prompted, setPrompted ] = useState(false);
+  const isMechanic = useMemo(() => user?.role === 'MECHANIC', [ user ]);
 
-  const loadBooking = async () => {
+  const loadBooking = useCallback(async (showLoading = true) => {
     if (!token || !user) return;
-    setLoading(true);
+    if (showLoading) {
+      setLoading(true);
+    }
     try {
       const list = user.role === 'MECHANIC' ? await api.mechanicBookings(token) : await api.ownerBookings(token);
       const item = list.find((b) => String(b.id) === String(bookingId));
@@ -31,9 +33,35 @@ const BookingScreen = () => {
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to load booking');
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
-  };
+  }, [ token, user, bookingId ]);
+
+  const loadBookingSummary = useCallback(async () => {
+    if (!token || !bookingId || !booking) return;
+    try {
+      const summary = await api.bookingSummary(token, bookingId);
+      if (summary?.status && summary.status !== booking.status) {
+        await loadBooking(false);
+        return;
+      }
+      if (summary) {
+        setBooking((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            status: summary.status ?? prev.status,
+            vehicleMake: summary.vehicleMake ?? prev.vehicleMake,
+            vehicleModel: summary.vehicleModel ?? prev.vehicleModel,
+          };
+        });
+      }
+    } catch (_err) {
+      // ignore transient summary polling failures
+    }
+  }, [ token, bookingId, booking, loadBooking ]);
 
   const pushLocation = async () => {
     if (!liveRiderLocation || !token || !bookingId) return;
@@ -42,28 +70,36 @@ const BookingScreen = () => {
         latitude: liveRiderLocation.latitude,
         longitude: liveRiderLocation.longitude,
       });
-    } catch (error) {
+    } catch (_error) {
       // ignore location errors
     }
   };
 
   const loadLocations = async () => {
     if (!token || !bookingId) return;
-    const data = await api.getLocations(token, bookingId);
-    setLocations(data);
+    try {
+      const data = await api.getLiveLocation(token, bookingId);
+      setLocations(Array.isArray(data) ? data : []);
+    } catch (_err) {
+      // ignore transient location polling failures
+    }
   };
 
   useEffect(() => {
     loadBooking();
-  }, [bookingId, token]);
+  }, [ loadBooking ]);
 
   useEffect(() => {
     if (!token || !bookingId) return undefined;
     const interval = setInterval(() => {
-      loadBooking();
+      if (!booking) {
+        loadBooking(false);
+        return;
+      }
+      loadBookingSummary();
     }, 5000);
     return () => clearInterval(interval);
-  }, [token, bookingId]);
+  }, [ token, bookingId, booking, loadBooking, loadBookingSummary ]);
 
   useEffect(() => {
     if (!booking) return undefined;
@@ -73,7 +109,7 @@ const BookingScreen = () => {
       return () => clearInterval(interval);
     }
     return undefined;
-  }, [booking, token, bookingId]);
+  }, [ booking, token, bookingId ]);
 
   useEffect(() => {
     if (!booking || !isMechanic) return undefined;
@@ -82,7 +118,7 @@ const BookingScreen = () => {
       return () => clearInterval(interval);
     }
     return undefined;
-  }, [booking, isMechanic, liveRiderLocation, token, bookingId]);
+  }, [ booking, isMechanic, liveRiderLocation, token, bookingId ]);
 
   useEffect(() => {
     if (booking?.status === 'COMPLETED' && booking?.completeVerified && !prompted) {
@@ -92,7 +128,7 @@ const BookingScreen = () => {
         { text: 'Give Feedback', onPress: () => router.push('/feedback') },
       ]);
     }
-  }, [booking, prompted]);
+  }, [ booking, prompted ]);
 
   const handleVerifyMeet = async () => {
     try {
@@ -125,8 +161,8 @@ const BookingScreen = () => {
     }
   };
 
-  const ownerLocation = locations.find((loc) => String(loc.user.id) === String(booking?.ownerId));
-  const mechanicLocation = locations.find((loc) => String(loc.user.id) === String(booking?.mechanicId));
+  const ownerLocation = locations.find((loc) => String(loc.userId ?? loc.user?.id) === String(booking?.ownerId));
+  const mechanicLocation = locations.find((loc) => String(loc.userId ?? loc.user?.id) === String(booking?.mechanicId));
   const riderLocation = isMechanic
     ? (liveRiderLocation || (mechanicLocation ? { latitude: mechanicLocation.latitude, longitude: mechanicLocation.longitude } : null))
     : (mechanicLocation ? { latitude: mechanicLocation.latitude, longitude: mechanicLocation.longitude } : null);
@@ -137,87 +173,87 @@ const BookingScreen = () => {
   const handleRiderLocationUpdate = useCallback((location) => {
     if (!isMechanic) return;
     setLiveRiderLocation(location);
-  }, [isMechanic]);
+  }, [ isMechanic ]);
 
   return (
     <AppShell hideChrome hideSupport>
-      <View style={styles.container}>
-        {loading && (
-          <View style={styles.card}>
-            <Skeleton height={18} width="40%" />
-            <SkeletonRow lines={3} lineHeight={12} />
+      <View style={ styles.container }>
+        { loading && (
+          <View style={ styles.card }>
+            <Skeleton height={ 18 } width="40%" />
+            <SkeletonRow lines={ 3 } lineHeight={ 12 } />
           </View>
-        )}
-        {booking && (
-          <View style={styles.card}>
-            <Text style={styles.title}>Booking #{booking.id}</Text>
-            <Text style={styles.text}>Status: {booking.status}</Text>
-            <Text style={styles.text}>Vehicle: {booking.vehicleMake} {booking.vehicleModel}</Text>
-            <Text style={styles.text}>Issue: {booking.issueDescription}</Text>
+        ) }
+        { booking && (
+          <View style={ styles.card }>
+            <Text style={ styles.title }>Booking #{ booking.id }</Text>
+            <Text style={ styles.text }>Status: { booking.status }</Text>
+            <Text style={ styles.text }>Vehicle: { booking.vehicleMake } { booking.vehicleModel }</Text>
+            <Text style={ styles.text }>Issue: { booking.issueDescription }</Text>
           </View>
-        )}
+        ) }
 
-        {(booking?.status === 'ACCEPTED' || booking?.status === 'IN_PROGRESS') && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Live Tracking</Text>
+        { (booking?.status === 'ACCEPTED' || booking?.status === 'IN_PROGRESS') && (
+          <View style={ styles.card }>
+            <Text style={ styles.sectionTitle }>Live Tracking</Text>
             <MapScreen
-              riderLocation={riderLocation}
-              destinationLocation={destinationLocation}
-              onRiderLocationUpdate={handleRiderLocationUpdate}
+              riderLocation={ riderLocation }
+              destinationLocation={ destinationLocation }
+              onRiderLocationUpdate={ handleRiderLocationUpdate }
             />
           </View>
-        )}
+        ) }
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>OTP Verification</Text>
-          {!isMechanic && booking && !booking.meetVerified && (
+        <View style={ styles.card }>
+          <Text style={ styles.sectionTitle }>OTP Verification</Text>
+          { !isMechanic && booking && !booking.meetVerified && (
             <>
-              <Text style={styles.text}>Meet OTP: {booking.meetOtp || 'Pending'}</Text>
-              <Text style={styles.text}>Share this with mechanic</Text>
+              <Text style={ styles.text }>Meet OTP: { booking.meetOtp || 'Pending' }</Text>
+              <Text style={ styles.text }>Share this with mechanic</Text>
             </>
-          )}
-          {!isMechanic && booking && booking.meetVerified && !booking.completeOtp && (
-            <TouchableOpacity style={styles.primaryButton} onPress={handleGenerateCompleteOtp}>
-              <Text style={styles.primaryButtonText}>Service Done</Text>
+          ) }
+          { !isMechanic && booking && booking.meetVerified && !booking.completeOtp && (
+            <TouchableOpacity style={ styles.primaryButton } onPress={ handleGenerateCompleteOtp }>
+              <Text style={ styles.primaryButtonText }>Service Done</Text>
             </TouchableOpacity>
-          )}
-          {!isMechanic && booking && booking.completeOtp && (
+          ) }
+          { !isMechanic && booking && booking.completeOtp && (
             <>
-              <Text style={styles.text}>Completion OTP: {booking.completeOtp}</Text>
-              <Text style={styles.text}>Share this with mechanic</Text>
+              <Text style={ styles.text }>Completion OTP: { booking.completeOtp }</Text>
+              <Text style={ styles.text }>Share this with mechanic</Text>
             </>
-          )}
+          ) }
 
-          {isMechanic && booking && !booking.meetVerified && (
+          { isMechanic && booking && !booking.meetVerified && (
             <>
               <TextInput
                 placeholder="Enter Meet OTP"
-                placeholderTextColor={COLORS.placeholder}
-                value={otpMeet}
-                onChangeText={setOtpMeet}
-                style={styles.input}
+                placeholderTextColor={ COLORS.placeholder }
+                value={ otpMeet }
+                onChangeText={ setOtpMeet }
+                style={ styles.input }
                 keyboardType="numeric"
               />
-              <TouchableOpacity style={styles.secondaryButton} onPress={handleVerifyMeet}>
-                <Text style={styles.secondaryButtonText}>Verify Meet OTP</Text>
+              <TouchableOpacity style={ styles.secondaryButton } onPress={ handleVerifyMeet }>
+                <Text style={ styles.secondaryButtonText }>Verify Meet OTP</Text>
               </TouchableOpacity>
             </>
-          )}
-          {isMechanic && booking && booking.meetVerified && !booking.completeVerified && (
+          ) }
+          { isMechanic && booking && booking.meetVerified && !booking.completeVerified && (
             <>
               <TextInput
                 placeholder="Enter Completion OTP"
-                placeholderTextColor={COLORS.placeholder}
-                value={otpComplete}
-                onChangeText={setOtpComplete}
-                style={styles.input}
+                placeholderTextColor={ COLORS.placeholder }
+                value={ otpComplete }
+                onChangeText={ setOtpComplete }
+                style={ styles.input }
                 keyboardType="numeric"
               />
-              <TouchableOpacity style={styles.secondaryButton} onPress={handleVerifyComplete}>
-                <Text style={styles.secondaryButtonText}>Verify Completion OTP</Text>
+              <TouchableOpacity style={ styles.secondaryButton } onPress={ handleVerifyComplete }>
+                <Text style={ styles.secondaryButtonText }>Verify Completion OTP</Text>
               </TouchableOpacity>
             </>
-          )}
+          ) }
         </View>
       </View>
     </AppShell>
@@ -228,6 +264,7 @@ const styles = StyleSheet.create({
   container: {
     padding: 18,
     gap: 16,
+    paddingTop: 50,
   },
   card: {
     backgroundColor: COLORS.card,

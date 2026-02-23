@@ -17,7 +17,7 @@ const extractRunNumber = (value) => {
 };
 
 const AuthGate = ({ children }) => {
-  const { user, token, ready } = useAuth();
+  const { token, ready, signout, sessionExpiredVisible, setSessionExpiredVisible } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -32,7 +32,40 @@ const AuthGate = ({ children }) => {
     }
   }, [ready, token, segments, router]);
 
-  return children;
+  const handleLoginPress = () => {
+    signout();
+    setSessionExpiredVisible(false);
+    router.replace('/auth/signin');
+  };
+
+  const handleCancelPress = () => {
+    signout();
+    setSessionExpiredVisible(false);
+  };
+
+  return (
+    <>
+      {children}
+      <Modal transparent visible={sessionExpiredVisible} animationType="fade" onRequestClose={handleCancelPress}>
+        <View style={styles.updateBackdrop}>
+          <View style={styles.updateCard}>
+            <Text style={styles.updateTitle}>Session expired</Text>
+            <Text style={styles.updateSubtitle}>
+              Your login session has expired. Please login again to continue.
+            </Text>
+            <View style={styles.updateActions}>
+              <Pressable onPress={handleCancelPress} style={[styles.updateButton, styles.cancelButton]}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={handleLoginPress} style={[styles.updateButton, styles.downloadButton]}>
+                <Text style={styles.downloadText}>Login</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
 };
 
 const UpdatePrompt = () => {

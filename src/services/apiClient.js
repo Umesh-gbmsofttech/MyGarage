@@ -1,5 +1,11 @@
 import API_URL from '../../api';
 
+let authExpiredHandler = null;
+
+const setAuthExpiredHandler = (handler) => {
+  authExpiredHandler = typeof handler === 'function' ? handler : null;
+};
+
 const request = async ({ path, method = 'GET', token, body }) => {
   const headers = {};
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
@@ -18,22 +24,52 @@ const request = async ({ path, method = 'GET', token, body }) => {
   });
 
   if (!response.ok) {
+    const status = response.status;
     let errorMessage = 'Request failed';
+    let errorPayload = '';
     try {
-      const errorJson = await response.json();
-      errorMessage = errorJson.error || errorJson.message || errorMessage;
+      errorPayload = await response.text();
+      if (errorPayload) {
+        try {
+          const errorJson = JSON.parse(errorPayload);
+          errorMessage = errorJson.error || errorJson.message || errorPayload;
+        } catch {
+          errorMessage = errorPayload;
+        }
+      }
     } catch {
-      const errorText = await response.text();
-      if (errorText) errorMessage = errorText;
+      // keep default error message when body cannot be read
     }
-    throw new Error(errorMessage);
+    const normalized = String(errorMessage).toLowerCase();
+    const authExpired =
+      status === 401 ||
+      normalized.includes('token expired') ||
+      normalized.includes('jwt expired') ||
+      normalized.includes('unauthorized');
+
+    if (authExpired && authExpiredHandler) {
+      authExpiredHandler();
+    }
+
+    const error = new Error(errorMessage);
+    error.status = status;
+    error.isAuthExpired = authExpired;
+    throw error;
   }
 
   if (response.status === 204) {
     return null;
   }
 
-  return response.json();
+  const text = await response.text();
+  if (!text) {
+    return null;
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 };
 
-export default { request };
+export default { request, setAuthExpiredHandler };

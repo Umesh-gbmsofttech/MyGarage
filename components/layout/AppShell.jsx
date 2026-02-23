@@ -32,7 +32,11 @@ const AppShell = ({ children, hideChrome = false, hideSupport = false, title }) 
 
   return (
     <View style={styles.container} onTouchStart={resetTimer}>
-      <StatusBar hidden={statusHidden} />
+      <StatusBar
+        hidden={statusHidden}
+        backgroundColor="rgba(15, 23, 42, 0.35)"
+        barStyle="light-content"
+      />
       {!hideChrome && <HeaderBar onMenuPress={() => setIsMenuOpen(true)} title={title} />}
       <View style={styles.content}>{children}</View>
       {!hideSupport && <SupportFab />}

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Alert, Image, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Linking, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../src/context/AuthContext';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
-import COLORS from '../../theme/colors';
+import colors from '../../theme/colors';
 
 const SignUpScreen = () => {
   const { signupOwner, signupMechanic } = useAuth();
@@ -12,7 +13,6 @@ const SignUpScreen = () => {
   const [ role, setRole ] = useState('VEHICLE_OWNER');
   const [ showPassword, setShowPassword ] = useState(false);
   const [ profileImage, setProfileImage ] = useState(null);
-  const [ imagePickerReady, setImagePickerReady ] = useState(true);
   const [ form, setForm ] = useState({
     name: '',
     surname: '',
@@ -26,6 +26,30 @@ const SignUpScreen = () => {
   });
 
   const update = (key, value) => setForm((prev) => ({ ...prev, [ key ]: value }));
+
+  const ensureMediaPermission = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permission.granted) return true;
+
+    const message = permission.canAskAgain === false
+      ? 'Photo library permission is blocked. Enable Photos and media access in app settings.'
+      : 'Please allow access to Photos and media assets to select profile images.';
+    Alert.alert(
+      'Permission required',
+      message,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+      ]
+    );
+    return false;
+  };
+
+  const isSquareAsset = (asset) => {
+    if (!asset) return false;
+    if (typeof asset.width !== 'number' || typeof asset.height !== 'number') return true;
+    return asset.width === asset.height;
+  };
 
   const handleSignup = async () => {
     try {
@@ -49,7 +73,7 @@ const SignUpScreen = () => {
           formData.append('file', {
             uri: profileImage.uri,
             name: profileImage.fileName || 'profile.jpg',
-            type: profileImage.type || 'image/jpeg',
+            type: profileImage.mimeType || profileImage.type || 'image/jpeg',
           });
           await api.uploadProfileImage(response.token, formData);
         }
@@ -77,7 +101,7 @@ const SignUpScreen = () => {
           formData.append('file', {
             uri: profileImage.uri,
             name: profileImage.fileName || 'profile.jpg',
-            type: profileImage.type || 'image/jpeg',
+            type: profileImage.mimeType || profileImage.type || 'image/jpeg',
           });
           await api.uploadProfileImage(response.token, formData);
         }
@@ -89,27 +113,35 @@ const SignUpScreen = () => {
   };
 
   const handlePickImage = async () => {
-    let ImagePicker;
     try {
-      ImagePicker = await import('expo-image-picker');
-      setImagePickerReady(true);
-    } catch (err) {
-      setImagePickerReady(false);
-      Alert.alert('Error', 'Image picker is not available in this build.');
-      return;
-    }
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission required', 'Please allow access to your photos.');
-      return;
-    }
-    const mediaType = ImagePicker.MediaType?.Images || ImagePicker.MediaTypeOptions?.Images;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: mediaType,
-      quality: 0.8,
-    });
-    if (!result.canceled) {
-      setProfileImage(result.assets[ 0 ]);
+      const allowed = await ensureMediaPermission();
+      if (!allowed) {
+        return;
+      }
+      const mediaType = ImagePicker.MediaTypeOptions.Images;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: mediaType,
+        allowsEditing: true,
+        aspect: [ 1, 1 ],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets?.length) {
+        const selectedAsset = result.assets[ 0 ];
+        if (!isSquareAsset(selectedAsset)) {
+          Alert.alert(
+            'Square image required',
+            'Please crop your profile image to a square.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Crop Again', onPress: handlePickImage },
+            ]
+          );
+          return;
+        }
+        setProfileImage(selectedAsset);
+      }
+    } catch (_err) {
+      Alert.alert('Error', 'Failed to open image library.');
     }
   };
 
@@ -140,13 +172,13 @@ const SignUpScreen = () => {
           ) }
         </TouchableOpacity>
 
-        <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Name" value={ form.name } onChangeText={ (v) => update('name', v) } style={ styles.input } />
-        <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Surname" value={ form.surname } onChangeText={ (v) => update('surname', v) } style={ styles.input } />
-        <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Mobile" value={ form.mobile } onChangeText={ (v) => update('mobile', v) } style={ styles.input } />
-        <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Email" value={ form.email } onChangeText={ (v) => update('email', v) } style={ styles.input } />
+        <TextInput placeholderTextColor={ colors.placeholder } placeholder="Name" value={ form.name } onChangeText={ (v) => update('name', v) } style={ styles.input } />
+        <TextInput placeholderTextColor={ colors.placeholder } placeholder="Surname" value={ form.surname } onChangeText={ (v) => update('surname', v) } style={ styles.input } />
+        <TextInput placeholderTextColor={ colors.placeholder } placeholder="Mobile" value={ form.mobile } onChangeText={ (v) => update('mobile', v) } style={ styles.input } />
+        <TextInput placeholderTextColor={ colors.placeholder } placeholder="Email" value={ form.email } onChangeText={ (v) => update('email', v) } style={ styles.input } />
         <View style={ styles.passwordRow }>
           <TextInput
-            placeholderTextColor={ COLORS.placeholder }
+            placeholderTextColor={ colors.placeholder }
             placeholder="Password"
             value={ form.password }
             onChangeText={ (v) => update('password', v) }
@@ -160,9 +192,9 @@ const SignUpScreen = () => {
 
         { role === 'MECHANIC' && (
           <>
-            <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Experience" value={ form.experience } onChangeText={ (v) => update('experience', v) } style={ styles.input } />
-            <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Speciality" value={ form.speciality } onChangeText={ (v) => update('speciality', v) } style={ styles.input } />
-            <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="City" value={ form.city } onChangeText={ (v) => update('city', v) } style={ styles.input } />
+            <TextInput placeholderTextColor={ colors.placeholder } placeholder="Experience" value={ form.experience } onChangeText={ (v) => update('experience', v) } style={ styles.input } />
+            <TextInput placeholderTextColor={ colors.placeholder } placeholder="Speciality" value={ form.speciality } onChangeText={ (v) => update('speciality', v) } style={ styles.input } />
+            <TextInput placeholderTextColor={ colors.placeholder } placeholder="City" value={ form.city } onChangeText={ (v) => update('city', v) } style={ styles.input } />
             <View style={ styles.switchRow }>
               <Text style={ styles.switchLabel }>Shop active</Text>
               <Switch value={ form.shopActive } onValueChange={ (v) => update('shopActive', v) } />
@@ -191,10 +223,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: COLORS.primary,
+    color: colors.primary,
     alignSelf: 'center',
     borderBottomWidth: 3,
-    borderColor: COLORS.primarySoft,
+    borderColor: colors.primarySoft,
 
   },
   roleSwitch: {
@@ -206,14 +238,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
     alignItems: 'center',
   },
   roleButtonActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
   roleText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '700',
   },
   roleTextActive: {
@@ -221,12 +253,12 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: COLORS.card,
-    color: COLORS.text
+    backgroundColor: colors.card,
+    color: colors.text
   },
   passwordRow: {
     flexDirection: 'row',
@@ -241,11 +273,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.card,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
   },
   eyeText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '700',
   },
   switchRow: {
@@ -256,10 +288,10 @@ const styles = StyleSheet.create({
   switchLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.text,
+    color: colors.text,
   },
   primaryButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
@@ -269,7 +301,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   link: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -278,11 +310,11 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 48,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
   },
   profilePreview: {
     width: 92,
@@ -291,7 +323,7 @@ const styles = StyleSheet.create({
   },
   imagePickerText: {
     fontSize: 12,
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '700',
     textAlign: 'center',
     paddingHorizontal: 6,
@@ -299,3 +331,5 @@ const styles = StyleSheet.create({
 });
 
 export default SignUpScreen;
+
+

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../src/context/AuthContext';
 import api from '../../src/services/api';
@@ -22,6 +22,7 @@ const BookingsScreen = () => {
   const { user, token } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [error, setError] = useState('');
   const load = useCallback(async (showLoading = true) => {
@@ -42,6 +43,15 @@ const BookingsScreen = () => {
     load();
   }, [load]);
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(false);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
+
   const handleRespond = async (bookingId, status) => {
     try {
       await api.respondBooking(token, bookingId, { status });
@@ -57,7 +67,10 @@ const BookingsScreen = () => {
 
   return (
     <AppShell title="My Bookings">
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+      >
         {!user && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>You are not logged in</Text>

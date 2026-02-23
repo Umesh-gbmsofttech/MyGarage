@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../src/context/AuthContext';
@@ -11,17 +11,34 @@ const SignInScreen = () => {
   const [ email, setEmail ] = useState('');
   const [ password, setPassword ] = useState('');
   const [ showPassword, setShowPassword ] = useState(false);
+  const [ loading, setLoading ] = useState(false);
+  const [ loadingDots, setLoadingDots ] = useState('');
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingDots('');
+      return;
+    }
+    const interval = setInterval(() => {
+      setLoadingDots((prev) => (prev.length >= 3 ? '' : `${prev}.`));
+    }, 350);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const handleSignin = async () => {
+    if (loading) return;
     if (!email || !password) {
       Alert.alert('Error', 'Please fill all fields.');
       return;
     }
+    setLoading(true);
     try {
       await signin({ email, password });
       router.replace('/');
     } catch (err) {
       Alert.alert('Error', err.message || 'Login failed');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -51,8 +68,12 @@ const SignInScreen = () => {
             <Text style={ styles.eyeText }>{ showPassword ? 'Hide' : 'Show' }</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={ styles.primaryButton } onPress={ handleSignin }>
-          <Text style={ styles.primaryButtonText }>Sign In</Text>
+        <TouchableOpacity
+          style={ [ styles.primaryButton, loading && styles.primaryButtonDisabled ] }
+          onPress={ handleSignin }
+          disabled={ loading }
+        >
+          <Text style={ styles.primaryButtonText }>{ loading ? `Loading${loadingDots}` : 'Sign In' }</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={ () => router.push('/auth/signup') }>
           <Text style={ styles.link }>Create a new account</Text>
@@ -110,6 +131,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
+  },
+  primaryButtonDisabled: {
+    opacity: 0.8,
   },
   primaryButtonText: {
     color: '#FFFFFF',

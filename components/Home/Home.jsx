@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import DoItYourselfSection from '../diy/DoItYourselfSection';
 import OurMechanics from '../mechanic/OurMechanics';
 import TopMechanics from '../mechanic/TopMechanics';
@@ -18,6 +18,7 @@ const Home = () => {
   const [ topMechanics, setTopMechanics ] = useState([]);
   const [ randomMechanics, setRandomMechanics ] = useState([]);
   const [ banners, setBanners ] = useState([]);
+  const [ refreshing, setRefreshing ] = useState(false);
 
   const load = useCallback(async () => {
     const top = await api.topRatedMechanics(5);
@@ -32,6 +33,15 @@ const Home = () => {
     load();
   }, [ load ]);
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
+
   useEffect(() => {
     if (params.section === 'diy' && diyRef.current && scrollRef.current) {
       diyRef.current.measureLayout(scrollRef.current.getScrollResponder(), (x, y) => {
@@ -44,6 +54,9 @@ const Home = () => {
     <ScrollView
       ref={ scrollRef }
       contentContainerStyle={ styles.container }
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+      }
     >
       {banners.length > 0 ? (
         <BannerCarousel banners={ banners } />

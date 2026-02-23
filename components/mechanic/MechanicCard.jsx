@@ -1,12 +1,23 @@
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import API_BASE from '../../api';
 import { useAuth } from '../../src/context/AuthContext';
 import COLORS from '../../theme/colors';
 
 const MechanicCard = ({ mechanic }) => {
   const router = useRouter();
   const { user } = useAuth();
+  const [imageError, setImageError] = React.useState(false);
+
+  const profileImageUri = (() => {
+    const value = mechanic?.profileImageUrl;
+    if (!value) return '';
+    if (String(value).startsWith('http://') || String(value).startsWith('https://')) {
+      return value;
+    }
+    return `${API_BASE.replace('/api', '')}${value}`;
+  })();
 
   const handleBook = () => {
     if (!user) {
@@ -18,10 +29,18 @@ const MechanicCard = ({ mechanic }) => {
 
   return (
     <View style={styles.card}>
-      <Image
-        source={mechanic.profileImageUrl ? { uri: mechanic.profileImageUrl } : require('../../assets/images/profile.png')}
-        style={styles.avatar}
-      />
+      {profileImageUri && !imageError ? (
+        <Image
+          source={{ uri: profileImageUri }}
+          style={styles.avatar}
+          onError={() => setImageError(true)}
+        />
+      ) : (
+        <Image
+          source={require('../../assets/images/profile.png')}
+          style={styles.avatar}
+        />
+      )}
       <Text style={styles.name}>{mechanic.mechName} {mechanic.surname}</Text>
       <Text style={styles.speciality}>{mechanic.expertise || mechanic.speciality || 'General'}</Text>
       <Text style={styles.rating}>{(mechanic.rating || 0).toFixed(1)} / ({mechanic.ratingCount || 0})</Text>

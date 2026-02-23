@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import api from '../services/api';
+import apiClient from '../services/apiClient';
 
 const AuthContext = createContext(null);
 const TOKEN_KEY = 'token';
@@ -10,6 +11,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [ready, setReady] = useState(false);
+  const [sessionExpiredVisible, setSessionExpiredVisible] = useState(false);
 
   useEffect(() => {
     const loadSession = async () => {
@@ -89,13 +91,35 @@ export const AuthProvider = ({ children }) => {
   const signout = () => {
     setUser(null);
     setToken(null);
+    setSessionExpiredVisible(false);
     SecureStore.deleteItemAsync(TOKEN_KEY);
     SecureStore.deleteItemAsync(USER_KEY);
   };
 
+  useEffect(() => {
+    apiClient.setAuthExpiredHandler(() => {
+      if (token) {
+        setSessionExpiredVisible(true);
+      }
+    });
+    return () => {
+      apiClient.setAuthExpiredHandler(null);
+    };
+  }, [token]);
+
   const value = useMemo(
-    () => ({ user, token, signin, signupOwner, signupMechanic, signout, ready }),
-    [user, token, ready]
+    () => ({
+      user,
+      token,
+      signin,
+      signupOwner,
+      signupMechanic,
+      signout,
+      ready,
+      sessionExpiredVisible,
+      setSessionExpiredVisible,
+    }),
+    [user, token, ready, sessionExpiredVisible]
   );
 
   if (!ready) {

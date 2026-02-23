@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import api from '../../src/services/api';
+import API_BASE from '../../api';
 import COLORS from '../../theme/colors';
 
 const { width } = Dimensions.get('window');
@@ -12,6 +13,7 @@ const RatingReviewSection = () => {
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef(null);
   const [reviews, setReviews] = useState([]);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState({});
 
   useEffect(() => {
     const load = async () => {
@@ -49,6 +51,16 @@ const RatingReviewSection = () => {
     return <View style={styles.starRow}>{stars}</View>;
   };
 
+  const resolveAvatarUri = (review) => {
+    if (!review?.author) return '';
+    const raw = review.author.profileImageUrl || review.author.avatarUrl || '';
+    if (!raw) return '';
+    if (String(raw).startsWith('http://') || String(raw).startsWith('https://')) {
+      return raw;
+    }
+    return `${API_BASE.replace('/api', '')}${raw}`;
+  };
+
   return (
     <View style={styles.reviewsSection}>
       <Text style={styles.title}>Customer Reviews</Text>
@@ -67,7 +79,15 @@ const RatingReviewSection = () => {
             {renderStars(review.rating || 0)}
             <Text style={styles.comment}>{review.comment || 'No comment provided.'}</Text>
             <View style={styles.reviewerInfo}>
-              <Image source={require('../../assets/images/profile.png')} style={styles.avatarSmall} />
+              {resolveAvatarUri(review) && !avatarLoadFailed[review.id] ? (
+                <Image
+                  source={{ uri: resolveAvatarUri(review) }}
+                  style={styles.avatarSmall}
+                  onError={() => setAvatarLoadFailed((prev) => ({ ...prev, [review.id]: true }))}
+                />
+              ) : (
+                <Image source={require('../../assets/images/profile.png')} style={styles.avatarSmall} />
+              )}
               <Text style={styles.reviewerName}>{review.author?.firstName || 'User'}</Text>
             </View>
           </View>

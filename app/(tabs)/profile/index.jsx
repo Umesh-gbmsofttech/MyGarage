@@ -1,17 +1,19 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Image, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Linking, Modal, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import AppShell from '../../../components/layout/AppShell';
 import { useAuth } from '../../../src/context/AuthContext';
 import api from '../../../src/services/api';
 import { useRouter } from 'expo-router';
-import API_BASE from '../../../api';
-import COLORS from '../../../theme/colors';
+import apiBase from '../../../api';
+import colors from '../../../theme/colors';
 import { Skeleton, SkeletonRow } from '../../../components/utility/Skeleton';
 
 const ProfileScreen = () => {
   const router = useRouter();
   const { user, token, signout } = useAuth();
   const [ loading, setLoading ] = useState(false);
+  const [ refreshing, setRefreshing ] = useState(false);
   const [ profile, setProfile ] = useState(null);
   const [ error, setError ] = useState('');
   const [ edit, setEdit ] = useState({});
@@ -25,23 +27,46 @@ const ProfileScreen = () => {
   const [ mechanicVisible, setMechanicVisible ] = useState(true);
   const [ platformReviews, setPlatformReviews ] = useState([]);
   const [ mechanicReviews, setMechanicReviews ] = useState([]);
-  const [ imagePickerReady, setImagePickerReady ] = useState(true);
+  const [ signoutConfirmVisible, setSignoutConfirmVisible ] = useState(false);
+  const [ profilePreviewVisible, setProfilePreviewVisible ] = useState(false);
 
-  const getImagePicker = async () => {
-    try {
-      const module = await import('expo-image-picker');
-      setImagePickerReady(true);
-      return module;
-    } catch (err) {
-      setImagePickerReady(false);
-      setError('Image picker is not available in this build.');
-      return null;
-    }
+  const ensureMediaPermission = async (onDenied) => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permission.granted) return true;
+
+    const message = permission.canAskAgain === false
+      ? 'Photo library permission is blocked. Enable Photos and media access in app settings.'
+      : 'Please allow access to Photos and media assets to continue.';
+    onDenied?.(message);
+    Alert.alert(
+      'Permission required',
+      message,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+      ]
+    );
+    return false;
   };
 
-  const loadProfile = useCallback(async () => {
+  const isSquareAsset = (asset) => {
+    if (!asset) return false;
+    if (typeof asset.width !== 'number' || typeof asset.height !== 'number') return true;
+    return asset.width === asset.height;
+  };
+
+  const isBannerAsset16By9 = (asset) => {
+    if (!asset) return false;
+    if (typeof asset.width !== 'number' || typeof asset.height !== 'number') return true;
+    const ratio = asset.width / asset.height;
+    return Math.abs(ratio - (16 / 9)) < 0.03;
+  };
+
+  const loadProfile = useCallback(async (showLoading = true) => {
     if (!token) return;
-    setLoading(true);
+    if (showLoading) {
+      setLoading(true);
+    }
     setError('');
     try {
       const data = await api.getProfile(token);
@@ -77,13 +102,27 @@ const ProfileScreen = () => {
     } catch (err) {
       setError(err.message || 'Failed to load profile');
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   }, [ token ]);
 
   useEffect(() => {
     if (token) {
       loadProfile();
+    }
+  }, [ token, loadProfile ]);
+
+  const handleRefresh = useCallback(async () => {
+    if (!token) {
+      return;
+    }
+    setRefreshing(true);
+    try {
+      await loadProfile(false);
+    } finally {
+      setRefreshing(false);
     }
   }, [ token, loadProfile ]);
 
@@ -102,21 +141,36 @@ const ProfileScreen = () => {
   };
 
   const handlePickBanner = async () => {
-    const ImagePicker = await getImagePicker();
-    if (!ImagePicker) return;
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      setBannerError('Permission to access media library is required.');
-      return;
-    }
-    const mediaType = ImagePicker.MediaType?.Images || ImagePicker.MediaTypeOptions?.Images;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: mediaType,
-      quality: 0.8,
-    });
-    if (!result.canceled) {
-      setSelectedBanner(result.assets[ 0 ]);
-      setBannerError('');
+    try {
+      const allowed = await ensureMediaPermission(setBannerError);
+      if (!allowed) {
+        return;
+      }
+      const mediaType = ImagePicker.MediaTypeOptions.Images;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: mediaType,
+        allowsEditing: true,
+        aspect: [ 16, 9 ],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets?.length) {
+        const asset = result.assets[ 0 ];
+        if (!isBannerAsset16By9(asset)) {
+          Alert.alert(
+            '16:9 image required',
+            'Please crop the banner image to 16:9.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Crop Again', onPress: handlePickBanner },
+            ]
+          );
+          return;
+        }
+        setSelectedBanner(asset);
+        setBannerError('');
+      }
+    } catch (_err) {
+      setBannerError('Failed to open image library.');
     }
   };
 
@@ -154,38 +208,52 @@ const ProfileScreen = () => {
   };
 
   const handlePickProfileImage = async () => {
-    const ImagePicker = await getImagePicker();
-    if (!ImagePicker) return;
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      setError('Permission to access media library is required.');
-      return;
-    }
-    const mediaType = ImagePicker.MediaType?.Images || ImagePicker.MediaTypeOptions?.Images;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: mediaType,
-      quality: 0.8,
-    });
-    if (!result.canceled) {
-      try {
-        const asset = result.assets[ 0 ];
-        const formData = new FormData();
-        formData.append('file', {
-          uri: asset.uri,
-          name: asset.fileName || 'profile.jpg',
-          type: asset.type || 'image/jpeg',
-        });
-        await api.uploadProfileImage(token, formData);
-        await loadProfile();
-      } catch (err) {
-        setError(err.message || 'Failed to upload profile image');
+    try {
+      const allowed = await ensureMediaPermission(setError);
+      if (!allowed) {
+        return;
       }
+      const mediaType = ImagePicker.MediaTypeOptions.Images;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: mediaType,
+        allowsEditing: true,
+        aspect: [ 1, 1 ],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets?.length) {
+        const asset = result.assets[ 0 ];
+        if (!isSquareAsset(asset)) {
+          Alert.alert(
+            'Square image required',
+            'Please crop your profile image to a square.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Crop Again', onPress: handlePickProfileImage },
+            ]
+          );
+          return;
+        }
+        try {
+          const formData = new FormData();
+          formData.append('file', {
+            uri: asset.uri,
+            name: asset.fileName || 'profile.jpg',
+            type: asset.mimeType || asset.type || 'image/jpeg',
+          });
+          await api.uploadProfileImage(token, formData);
+          await loadProfile();
+        } catch (err) {
+          setError(err.message || 'Failed to upload profile image');
+        }
+      }
+    } catch (_err) {
+      setError('Failed to open image library.');
     }
   };
 
   if (!user) {
     return (
-      <AppShell hideChrome>
+      <AppShell title="Profile">
         <View style={ styles.emptyState }>
           <Text style={ styles.emptyTitle }>You are not logged in</Text>
           <Text style={ styles.emptyText }>Please login to view your profile.</Text>
@@ -198,22 +266,32 @@ const ProfileScreen = () => {
   }
 
   return (
-    <AppShell hideChrome>
-      <ScrollView contentContainerStyle={ styles.container }>
+    <AppShell title="Profile">
+      <ScrollView
+        contentContainerStyle={ styles.container }
+        refreshControl={ <RefreshControl refreshing={ refreshing } onRefresh={ handleRefresh } /> }
+      >
         { loading && (
           <View style={ styles.card }>
-            <Skeleton height={60} width={60} style={ styles.profileAvatarPlaceholder } />
-            <SkeletonRow lines={3} lineHeight={12} />
+            <Skeleton height={ 60 } width={ 60 } style={ styles.profileAvatarPlaceholder } />
+            <SkeletonRow lines={ 3 } lineHeight={ 12 } />
           </View>
         ) }
         { error ? <Text style={ styles.error }>{ error }</Text> : null }
 
         { profile && (
           <View style={ styles.card }>
-            <TouchableOpacity style={ styles.profileHeader } onPress={ handlePickProfileImage }>
+            <TouchableOpacity
+              style={ styles.profileHeader }
+              onPress={ () => {
+                if (profile.profileImageUrl || profile.avatarUrl) {
+                  setProfilePreviewVisible(true);
+                }
+              } }
+            >
               { (profile.profileImageUrl || profile.avatarUrl) ? (
                 <Image
-                  source={ { uri: `${API_BASE.replace('/api', '')}${profile.profileImageUrl || profile.avatarUrl}` } }
+                  source={ { uri: `${apiBase.replace('/api', '')}${profile.profileImageUrl || profile.avatarUrl}` } }
                   style={ styles.profileAvatar }
                 />
               ) : (
@@ -280,7 +358,7 @@ const ProfileScreen = () => {
             <TouchableOpacity style={ styles.primaryButton } onPress={ () => setIsEditing(true) }>
               <Text style={ styles.primaryButtonText }>Edit Profile</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={ styles.secondaryButton } onPress={ signout }>
+            <TouchableOpacity style={ styles.secondaryButton } onPress={ () => setSignoutConfirmVisible(true) }>
               <Text style={ styles.secondaryButtonText }>Sign out</Text>
             </TouchableOpacity>
           </View>
@@ -324,7 +402,7 @@ const ProfileScreen = () => {
               { banners.map((banner) => (
                 <View key={ banner.id } style={ styles.bannerRow }>
                   <Image
-                    source={ { uri: `${API_BASE.replace('/api', '')}${banner.imageUrl}` } }
+                    source={ { uri: `${apiBase.replace('/api', '')}${banner.imageUrl}` } }
                     style={ styles.bannerImage }
                   />
                   <TouchableOpacity onPress={ () => handleDeleteBanner(banner.id) }>
@@ -337,7 +415,7 @@ const ProfileScreen = () => {
 
               <Text style={ styles.subTitle }>Mechanic visibility</Text>
               <TextInput
-                placeholderTextColor={COLORS.placeholder}
+                placeholderTextColor={ colors.placeholder }
                 placeholder="Mechanic user ID"
                 value={ mechanicId }
                 onChangeText={ setMechanicId }
@@ -384,21 +462,21 @@ const ProfileScreen = () => {
               <Text style={ styles.secondaryButtonText }>Change Profile Image</Text>
             </TouchableOpacity>
             <TextInput
-              placeholderTextColor={COLORS.placeholder}
+              placeholderTextColor={ colors.placeholder }
               placeholder="First name"
               value={ edit.firstName }
               onChangeText={ (value) => setEdit((prev) => ({ ...prev, firstName: value })) }
               style={ styles.input }
             />
             <TextInput
-              placeholderTextColor={COLORS.placeholder}
+              placeholderTextColor={ colors.placeholder }
               placeholder="Surname"
               value={ edit.surname }
               onChangeText={ (value) => setEdit((prev) => ({ ...prev, surname: value })) }
               style={ styles.input }
             />
             <TextInput
-              placeholderTextColor={COLORS.placeholder}
+              placeholderTextColor={ colors.placeholder }
               placeholder="Mobile"
               value={ edit.mobile }
               onChangeText={ (value) => setEdit((prev) => ({ ...prev, mobile: value })) }
@@ -408,35 +486,35 @@ const ProfileScreen = () => {
             { profile?.role === 'MECHANIC' && (
               <>
                 <TextInput
-                  placeholderTextColor={COLORS.placeholder}
+                  placeholderTextColor={ colors.placeholder }
                   placeholder="Experience"
                   value={ edit.experience }
                   onChangeText={ (value) => setEdit((prev) => ({ ...prev, experience: value })) }
                   style={ styles.input }
                 />
                 <TextInput
-                  placeholderTextColor={COLORS.placeholder}
+                  placeholderTextColor={ colors.placeholder }
                   placeholder="Speciality"
                   value={ edit.speciality }
                   onChangeText={ (value) => setEdit((prev) => ({ ...prev, speciality: value })) }
                   style={ styles.input }
                 />
                 <TextInput
-                  placeholderTextColor={COLORS.placeholder}
+                  placeholderTextColor={ colors.placeholder }
                   placeholder="City"
                   value={ edit.city }
                   onChangeText={ (value) => setEdit((prev) => ({ ...prev, city: value })) }
                   style={ styles.input }
                 />
                 <TextInput
-                  placeholderTextColor={COLORS.placeholder}
+                  placeholderTextColor={ colors.placeholder }
                   placeholder="Expertise"
                   value={ edit.expertise }
                   onChangeText={ (value) => setEdit((prev) => ({ ...prev, expertise: value })) }
                   style={ styles.input }
                 />
                 <TextInput
-                  placeholderTextColor={COLORS.placeholder}
+                  placeholderTextColor={ colors.placeholder }
                   placeholder="About"
                   value={ edit.about }
                   onChangeText={ (value) => setEdit((prev) => ({ ...prev, about: value })) }
@@ -456,14 +534,14 @@ const ProfileScreen = () => {
             { profile?.role === 'VEHICLE_OWNER' && (
               <>
                 <TextInput
-                  placeholderTextColor={COLORS.placeholder}
+                  placeholderTextColor={ colors.placeholder }
                   placeholder="City"
                   value={ edit.city }
                   onChangeText={ (value) => setEdit((prev) => ({ ...prev, city: value })) }
                   style={ styles.input }
                 />
                 <TextInput
-                  placeholderTextColor={COLORS.placeholder}
+                  placeholderTextColor={ colors.placeholder }
                   placeholder="Address"
                   value={ edit.addressLine }
                   onChangeText={ (value) => setEdit((prev) => ({ ...prev, addressLine: value })) }
@@ -481,37 +559,77 @@ const ProfileScreen = () => {
           </View>
         </View>
       </Modal>
+      <Modal visible={ signoutConfirmVisible } transparent animationType="fade" onRequestClose={ () => setSignoutConfirmVisible(false) }>
+        <View style={ styles.modalBackdrop }>
+          <View style={ styles.modalContent }>
+            <Text style={ styles.sectionTitle }>Confirmation!</Text>
+            <Text style={ styles.emptyText }>Are you sure you want to sign out?</Text>
+            <TouchableOpacity
+              style={ styles.primaryButton }
+              onPress={ () => {
+                setSignoutConfirmVisible(false);
+                signout();
+              } }
+            >
+              <Text style={ styles.primaryButtonText }>Sign out</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={ styles.secondaryButton } onPress={ () => setSignoutConfirmVisible(false) }>
+              <Text style={ styles.secondaryButtonText }>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={ profilePreviewVisible } transparent animationType="fade" onRequestClose={ () => setProfilePreviewVisible(false) }>
+        <View style={ styles.previewModalBackdrop }>
+          <View style={ styles.previewCard }>
+            <TouchableOpacity style={ styles.closeIconButton } onPress={ () => setProfilePreviewVisible(false) }>
+              <Text style={ styles.closeIconText }>X</Text>
+            </TouchableOpacity>
+            <Image
+              source={ { uri: `${apiBase.replace('/api', '')}${profile?.profileImageUrl || profile?.avatarUrl}` } }
+              style={ styles.previewLargeImage }
+              resizeMode="contain"
+            />
+          </View>
+        </View>
+      </Modal>
     </AppShell>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 18,
+    paddingHorizontal: 18,
+    paddingBottom: 18,
+    paddingTop: 28,
     gap: 16,
+    alignItems: 'center',
   },
   card: {
-    backgroundColor: COLORS.card,
+    width: '100%',
+    maxWidth: 640,
+    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: 12,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.text,
+    color: colors.text,
+    textAlign: 'center',
   },
   subTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.text,
+    color: colors.text,
   },
   roleTag: {
     alignSelf: 'flex-start',
     backgroundColor: '#EAF1F7',
-    color: COLORS.primary,
+    color: colors.primary,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
@@ -519,12 +637,12 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   profileRow: {
     flexDirection: 'row',
@@ -545,15 +663,15 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: COLORS.border,
+    backgroundColor: colors.border,
   },
   profileLabel: {
     fontSize: 13,
-    color: COLORS.muted,
+    color: colors.muted,
   },
   profileValue: {
     fontSize: 13,
-    color: COLORS.text,
+    color: colors.text,
     fontWeight: '600',
   },
   modalBackdrop: {
@@ -563,10 +681,49 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   modalContent: {
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 16,
     gap: 10,
+  },
+  previewModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  previewCard: {
+    width: '100%',
+    maxWidth: 380,
+    height: 420,
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  previewLargeImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
+  closeIconButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 2,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeIconText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
   },
   bannerPickerRow: {
     flexDirection: 'row',
@@ -582,7 +739,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   primaryButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
@@ -594,26 +751,26 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   secondaryButton: {
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
     borderWidth: 1,
     paddingVertical: 10,
     borderRadius: 12,
     alignItems: 'center',
   },
   secondaryButtonText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '700',
     paddingVertical: 2,
     paddingHorizontal: 10,
   },
   divider: {
     height: 1,
-    backgroundColor: COLORS.border,
+    backgroundColor: colors.border,
   },
   bannerRow: {
     padding: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderRadius: 12,
     gap: 10,
     flexDirection: 'row',
@@ -621,8 +778,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   bannerImage: {
-    width: 160,
-    height: 80,
+    width: 176,
+    height: 99,
     borderRadius: 10,
   },
   previewBox: {
@@ -630,29 +787,29 @@ const styles = StyleSheet.create({
   },
   previewImage: {
     width: '100%',
-    height: 160,
+    aspectRatio: 16 / 9,
     borderRadius: 12,
   },
   reviewRow: {
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   reviewText: {
     fontSize: 13,
-    color: COLORS.muted,
+    color: colors.muted,
   },
   reviewMeta: {
     fontSize: 12,
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '700',
   },
   link: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '600',
   },
   linkDanger: {
-    color: COLORS.danger,
+    color: colors.danger,
     fontWeight: '600',
   },
   emptyState: {
@@ -668,13 +825,15 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: COLORS.muted,
+    color: colors.muted,
     textAlign: 'center',
   },
   error: {
-    color: COLORS.danger,
+    color: colors.danger,
     textAlign: 'center',
   },
 });
 
 export default ProfileScreen;
+
+

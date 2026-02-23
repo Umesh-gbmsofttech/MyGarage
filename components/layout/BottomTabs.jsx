@@ -1,13 +1,16 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useRouter, useSegments } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import COLORS from '../../theme/colors';
 
 const BottomTabs = () => {
   const router = useRouter();
-  const segments = useSegments();
-  const current = segments[0] === '(tabs)' ? segments[1] : segments[0];
+  const pathname = usePathname();
+  const normalizedPath = (() => {
+    const next = (pathname || '/').replace('/(tabs)', '');
+    return next === '' ? '/' : next;
+  })();
 
   const items = [
     { key: 'index', label: 'Home', icon: 'home-outline', route: '/' },
@@ -18,9 +21,16 @@ const BottomTabs = () => {
   return (
     <View style={styles.container}>
       {items.map((item) => {
-        const isActive = current === item.key;
+        const isActive = normalizedPath === item.route;
         return (
-          <TouchableOpacity key={item.key} style={styles.tab} onPress={() => router.push(item.route)}>
+          <TouchableOpacity
+            key={item.key}
+            style={styles.tab}
+            onPress={() => {
+              if (isActive) return;
+              router.replace(item.route);
+            }}
+          >
             <Icon name={item.icon} size={22} color={isActive ? COLORS.primary : COLORS.muted} />
             <Text style={[styles.label, isActive && styles.labelActive]}>{item.label}</Text>
           </TouchableOpacity>
