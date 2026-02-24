@@ -9,7 +9,15 @@ import api from '../../src/services/api';
 
 const MAPLIBRE_STYLE_URL = 'https://demotiles.maplibre.org/style.json';
 const isExpoGo = Constants.appOwnership === 'expo';
-const MapLibreGL = !isExpoGo ? require('@maplibre/maplibre-react-native').default : null;
+let MapLibreGL = null;
+if (!isExpoGo) {
+  try {
+    MapLibreGL = require('@maplibre/maplibre-react-native').default;
+  } catch (error) {
+    console.warn('MapLibre failed to load', error);
+    MapLibreGL = null;
+  }
+}
 
 const showRouteUnavailableToast = () => {
   if (Platform.OS === 'android') {
@@ -38,6 +46,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
   const routeRequestInFlightRef = useRef(false);
   const routeCacheRef = useRef(new Map());
   const lastDirectionTapRef = useRef(0);
+  const autoRouteTriggeredRef = useRef(false);
 
   const [deviceLocation, setDeviceLocation] = useState(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -51,6 +60,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
   const [trackingEnabled, setTrackingEnabled] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState('');
+  const [trackingError, setTrackingError] = useState('');
 
   const activeRider = riderLocation || deviceLocation;
   const mapCenter = activeRider || destinationLocation || null;
@@ -59,6 +69,8 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
 
   const riderCoordinate = activeRider ? [activeRider.longitude, activeRider.latitude] : null;
   const destinationCoordinate = destinationLocation ? [destinationLocation.longitude, destinationLocation.latitude] : null;
+  const mainRouteSourceId = 'routeSource-main';
+  const fullRouteSourceId = 'routeSource-full';
 
   const routeFeature = useMemo(
     () => ({
@@ -81,6 +93,18 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
 
     targetCameraRef.current.fitBounds(ne, sw, [80, 80, 80, 80], 1200);
   }, []);
+
+  const fitToParticipants = useCallback(
+    (targetCameraRef) => {
+      if (!activeRider || !destinationLocation) return;
+      const coords = [
+        [activeRider.longitude, activeRider.latitude],
+        [destinationLocation.longitude, destinationLocation.latitude],
+      ];
+      fitMapBounds(targetCameraRef, coords);
+    },
+    [activeRider, destinationLocation, fitMapBounds]
+  );
 
   const normalizeRouteCoordinates = useCallback((payload) => {
     const source = payload?.geometry;
@@ -111,12 +135,13 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
   }, []);
 
   const fetchRoute = useCallback(
-    async (origin, destination) => {
+    async (origin, destination, options = {}) => {
+      const forceRefresh = Boolean(options.forceRefresh);
       if (!origin || !destination || routeRequestInFlightRef.current) return false;
 
       const routeKey = `${origin.latitude.toFixed(6)},${origin.longitude.toFixed(6)}:${destination.latitude.toFixed(6)},${destination.longitude.toFixed(6)}`;
       const cached = routeCacheRef.current.get(routeKey);
-      if (cached) {
+      if (cached && !forceRefresh) {
         setRouteError('');
         setRouteData(cached.route);
         setRouteSteps(cached.steps);
@@ -145,7 +170,6 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
 
         const mappedRoute = normalizeRouteCoordinates(data);
         if (mappedRoute.length <= 1) {
-          showRouteUnavailableToast();
           throw new Error('Route unavailable');
         }
 
@@ -176,6 +200,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
         const message = error?.message || 'Failed to load route directions.';
         setRouteError(message);
         console.error('Direction fetch failed', error);
+        showRouteUnavailableToast();
         Alert.alert('Directions Error', message);
         return false;
       } finally {
@@ -195,6 +220,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
     setDurationMinutes(null);
     setIsRouteVisible(false);
     setRouteError('');
+    autoRouteTriggeredRef.current = false;
   }, [destinationLat, destinationLng]);
 
   useEffect(() => {
@@ -202,10 +228,11 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          setRouteError('Location permission required for live tracking.');
+          setTrackingError('Location permission required for live tracking.');
           Alert.alert('Permission Required', 'Location permission is required for live tracking.');
           return;
         }
+        setTrackingError('');
         setTrackingEnabled(true);
 
         const current = (await Location.getCurrentPositionAsync({})) || (await Location.getLastKnownPositionAsync({}));
@@ -229,7 +256,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
         );
       } catch (error) {
         console.error('Failed to start location tracking', error);
-        setRouteError('Failed to initialize live location tracking.');
+        setTrackingError('Failed to initialize live location tracking.');
       }
     };
 
@@ -241,12 +268,22 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
 
   useEffect(() => {
     if (!mapCenter || isRouteVisible) return;
+    if (activeRider && destinationLocation) {
+      fitToParticipants(cameraRef);
+      return;
+    }
     cameraRef.current?.setCamera({
       centerCoordinate: [mapCenter.longitude, mapCenter.latitude],
       zoomLevel: 16,
       animationDuration: 700,
     });
-  }, [mapCenter, isRouteVisible]);
+  }, [activeRider, destinationLocation, fitToParticipants, mapCenter, isRouteVisible]);
+
+  useEffect(() => {
+    if (!activeRider || !destinationLocation || autoRouteTriggeredRef.current || routeLoading) return;
+    autoRouteTriggeredRef.current = true;
+    fetchRoute(activeRider, destinationLocation, { forceRefresh: false });
+  }, [activeRider, destinationLocation, fetchRoute, routeLoading]);
 
   const statusText = useMemo(() => {
     if (!trackingEnabled) return 'Location permission required for live tracking';
@@ -275,8 +312,8 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
     if (now - lastDirectionTapRef.current < 700) return;
     lastDirectionTapRef.current = now;
 
-    const success = await fetchRoute(activeRider, destinationLocation);
-    if (success) {
+    const refreshed = await fetchRoute(activeRider, destinationLocation, { forceRefresh: true });
+    if (refreshed) {
       setIsFullScreen(true);
     }
   }, [activeRider, destinationLocation, fetchRoute]);
@@ -285,7 +322,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
 
   const handleLocatePress = useCallback(() => {
     if (!activeRider && !destinationLocation) {
-      setRouteError('Waiting for live location updates.');
+      setTrackingError('Waiting for live location updates.');
       return;
     }
 
@@ -318,9 +355,13 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
       )}
 
       {isRouteVisible && routeData.length > 1 && (
-        <MapLibreGL.ShapeSource id={`routeSource-${targetCameraRef === fullCameraRef ? 'full' : 'main'}`} shape={routeFeature}>
+        <MapLibreGL.ShapeSource
+          id={targetCameraRef === fullCameraRef ? fullRouteSourceId : mainRouteSourceId}
+          shape={routeFeature}
+        >
           <MapLibreGL.LineLayer
             id={`routeLine-${targetCameraRef === fullCameraRef ? 'full' : 'main'}`}
+            sourceID={targetCameraRef === fullCameraRef ? fullRouteSourceId : mainRouteSourceId}
             style={{
               lineColor: COLORS.primary,
               lineWidth: 4,
@@ -333,13 +374,23 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
 
       {riderCoordinate && (
         <MapLibreGL.PointAnnotation id={`mechanic-${targetCameraRef === fullCameraRef ? 'full' : 'main'}`} coordinate={riderCoordinate}>
-          <View style={styles.mechanicMarker} />
+          <View style={styles.markerWrap}>
+            <View style={styles.markerLabel}>
+              <Text style={styles.markerLabelText}>Mechanic</Text>
+            </View>
+            <View style={styles.mechanicMarker} />
+          </View>
         </MapLibreGL.PointAnnotation>
       )}
 
       {destinationCoordinate && (
         <MapLibreGL.PointAnnotation id={`owner-${targetCameraRef === fullCameraRef ? 'full' : 'main'}`} coordinate={destinationCoordinate}>
-          <View style={styles.ownerMarker} />
+          <View style={styles.markerWrap}>
+            <View style={styles.markerLabel}>
+              <Text style={styles.markerLabelText}>Vehicle Owner</Text>
+            </View>
+            <View style={styles.ownerMarker} />
+          </View>
         </MapLibreGL.PointAnnotation>
       )}
     </MapLibreGL.MapView>
@@ -398,6 +449,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
             <Text style={styles.infoText}>Duration: {Math.round(durationMinutes)} min</Text>
           ) : null}
           {routeError ? <Text style={styles.infoErrorText}>{routeError}</Text> : null}
+          {trackingError ? <Text style={styles.infoErrorText}>{trackingError}</Text> : null}
           <Text style={styles.infoText}>{statusText}</Text>
         </View>
       </View>
@@ -515,6 +567,23 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
     backgroundColor: COLORS.accentWarm,
+  },
+  markerWrap: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  markerLabel: {
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  markerLabelText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
   },
   infoBox: {
     position: 'absolute',
