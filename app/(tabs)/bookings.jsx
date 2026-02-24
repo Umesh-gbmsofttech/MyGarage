@@ -6,6 +6,7 @@ import api from '../../src/services/api';
 import { useRouter } from 'expo-router';
 import COLORS from '../../theme/colors';
 import { Skeleton, SkeletonRow } from '../../components/utility/Skeleton';
+import { emitNotificationBadgeRefresh } from '../../src/utils/notificationBadgeEvents';
 
 const sortBookings = (list) => {
   return [...list].sort((a, b) => {
@@ -57,6 +58,7 @@ const BookingsScreen = () => {
       await api.respondBooking(token, bookingId, { status });
       const updated = user.role === 'MECHANIC' ? await api.mechanicBookings(token) : await api.ownerBookings(token);
       setBookings(sortBookings(updated));
+      emitNotificationBadgeRefresh();
     } catch (err) {
       setError(err.message || 'Failed to respond');
     }
@@ -116,7 +118,10 @@ const BookingsScreen = () => {
                 <View style={styles.cardActions}>
                   <TouchableOpacity
                     style={styles.secondaryButton}
-                    onPress={() => router.push({ pathname: '/booking', params: { bookingId: booking.id } })}
+                    onPress={() => {
+                      emitNotificationBadgeRefresh();
+                      router.push({ pathname: '/booking', params: { bookingId: booking.id } });
+                    }}
                   >
                     <Text style={styles.secondaryButtonText}>Open</Text>
                   </TouchableOpacity>
@@ -156,7 +161,10 @@ const BookingsScreen = () => {
                 <View style={styles.cardActions}>
                   <TouchableOpacity
                     style={styles.secondaryButton}
-                    onPress={() => router.push({ pathname: '/booking', params: { bookingId: booking.id } })}
+                    onPress={() => {
+                      emitNotificationBadgeRefresh();
+                      router.push({ pathname: '/booking', params: { bookingId: booking.id } });
+                    }}
                   >
                     <Text style={styles.secondaryButtonText}>Open</Text>
                   </TouchableOpacity>

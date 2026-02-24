@@ -10,6 +10,7 @@ import colors from '../../../theme/colors';
 import { Skeleton, SkeletonRow } from '../../../components/utility/Skeleton';
 
 const ProfileScreen = () => {
+  const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
   const router = useRouter();
   const { user, token, signout } = useAuth();
   const [ loading, setLoading ] = useState(false);
@@ -86,9 +87,9 @@ const ProfileScreen = () => {
         avatarUrl: data.avatarUrl || '',
       });
       if (data.role === 'ADMIN') {
-        const settings = await api.adminSettings();
+        const settings = await api.adminSettings(token);
         setAdminSettings(settings);
-        const bannersData = await api.adminBanners();
+        const bannersData = await api.adminBanners(token);
         setBanners(bannersData);
       }
       const platform = await api.platformReviews();
@@ -136,7 +137,7 @@ const ProfileScreen = () => {
   };
 
   const handleToggleSettings = async (value) => {
-    const updated = await api.updateAdminSettings({ showAllMechanics: value });
+    const updated = await api.updateAdminSettings(token, { showAllMechanics: value });
     setAdminSettings(updated);
   };
 
@@ -166,6 +167,10 @@ const ProfileScreen = () => {
           );
           return;
         }
+        if (asset.fileSize && asset.fileSize > MAX_IMAGE_BYTES) {
+          setBannerError('Image size exceeds 10MB. Please choose a smaller banner image.');
+          return;
+        }
         setSelectedBanner(asset);
         setBannerError('');
       }
@@ -183,29 +188,42 @@ const ProfileScreen = () => {
       formData.append('file', {
         uri: selectedBanner.uri,
         name: selectedBanner.fileName || 'banner.jpg',
-        type: selectedBanner.type || 'image/jpeg',
+        type: selectedBanner.mimeType || selectedBanner.type || 'image/jpeg',
       });
-      await api.uploadBanner(formData);
-      const refreshed = await api.adminBanners();
+      await api.uploadBanner(token, formData);
+      const refreshed = await api.adminBanners(token);
       setBanners(refreshed);
       setSelectedBanner(null);
     } catch (err) {
-      setBannerError(err.message || 'Upload failed');
+      const normalized = String(err?.message || '').toLowerCase();
+      if (normalized.includes('network request failed')) {
+        setBannerError('Upload failed. Check internet connection or select an image under 10MB.');
+      } else {
+        setBannerError(err.message || 'Upload failed');
+      }
     } finally {
       setBannerUploading(false);
     }
   };
 
   const handleDeleteBanner = async (bannerId) => {
-    await api.deleteBanner(bannerId);
-    const refreshed = await api.adminBanners();
+    await api.deleteBanner(token, bannerId);
+    const refreshed = await api.adminBanners(token);
     setBanners(refreshed);
   };
 
   const handleVisibility = async () => {
     if (!mechanicId) return;
-    await api.updateMechanicVisibility(mechanicId, mechanicVisible);
+    await api.updateMechanicVisibility(token, mechanicId, mechanicVisible);
   };
+
+  const isAdmin = profile?.role === 'ADMIN';
+  const hasUploadedProfileImage = Boolean(profile?.profileImageUrl || profile?.avatarUrl);
+  const effectiveProfileSource = isAdmin
+    ? require('../../../assets/images/MyGarage.png')
+    : hasUploadedProfileImage
+      ? { uri: `${apiBase.replace('/api', '')}${profile.profileImageUrl || profile.avatarUrl}` }
+      : null;
 
   const handlePickProfileImage = async () => {
     try {
@@ -284,14 +302,14 @@ const ProfileScreen = () => {
             <TouchableOpacity
               style={ styles.profileHeader }
               onPress={ () => {
-                if (profile.profileImageUrl || profile.avatarUrl) {
+                if (effectiveProfileSource) {
                   setProfilePreviewVisible(true);
                 }
               } }
             >
-              { (profile.profileImageUrl || profile.avatarUrl) ? (
+              { effectiveProfileSource ? (
                 <Image
-                  source={ { uri: `${apiBase.replace('/api', '')}${profile.profileImageUrl || profile.avatarUrl}` } }
+                  source={ effectiveProfileSource }
                   style={ styles.profileAvatar }
                 />
               ) : (
@@ -355,9 +373,11 @@ const ProfileScreen = () => {
               </>
             ) }
 
-            <TouchableOpacity style={ styles.primaryButton } onPress={ () => setIsEditing(true) }>
-              <Text style={ styles.primaryButtonText }>Edit Profile</Text>
-            </TouchableOpacity>
+            { !isAdmin && (
+              <TouchableOpacity style={ styles.primaryButton } onPress={ () => setIsEditing(true) }>
+                <Text style={ styles.primaryButtonText }>Edit Profile</Text>
+              </TouchableOpacity>
+            ) }
             <TouchableOpacity style={ styles.secondaryButton } onPress={ () => setSignoutConfirmVisible(true) }>
               <Text style={ styles.secondaryButtonText }>Sign out</Text>
             </TouchableOpacity>
@@ -586,7 +606,7 @@ const ProfileScreen = () => {
               <Text style={ styles.closeIconText }>X</Text>
             </TouchableOpacity>
             <Image
-              source={ { uri: `${apiBase.replace('/api', '')}${profile?.profileImageUrl || profile?.avatarUrl}` } }
+              source={ effectiveProfileSource || require('../../../assets/images/MyGarage.png') }
               style={ styles.previewLargeImage }
               resizeMode="contain"
             />

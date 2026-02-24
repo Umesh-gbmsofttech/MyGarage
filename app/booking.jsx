@@ -17,7 +17,7 @@ const BookingScreen = () => {
   const [ otpMeet, setOtpMeet ] = useState('');
   const [ otpComplete, setOtpComplete ] = useState('');
   const [ locations, setLocations ] = useState([]);
-  const [ liveRiderLocation, setLiveRiderLocation ] = useState(null);
+  const [ localDeviceLocation, setLocalDeviceLocation ] = useState(null);
   const [ prompted, setPrompted ] = useState(false);
   const isMechanic = useMemo(() => user?.role === 'MECHANIC', [ user ]);
 
@@ -64,14 +64,14 @@ const BookingScreen = () => {
   }, [ token, bookingId, booking, loadBooking ]);
 
   const pushLocation = async () => {
-    if (!liveRiderLocation || !token || !bookingId) return;
+    if (!localDeviceLocation || !token || !bookingId) return;
     try {
       await api.updateLocation(token, bookingId, {
-        latitude: liveRiderLocation.latitude,
-        longitude: liveRiderLocation.longitude,
+        latitude: localDeviceLocation.latitude,
+        longitude: localDeviceLocation.longitude,
       });
-    } catch (_error) {
-      // ignore location errors
+    } catch (error) {
+      console.error('Failed to push live location', error);
     }
   };
 
@@ -80,8 +80,8 @@ const BookingScreen = () => {
     try {
       const data = await api.getLiveLocation(token, bookingId);
       setLocations(Array.isArray(data) ? data : []);
-    } catch (_err) {
-      // ignore transient location polling failures
+    } catch (err) {
+      console.error('Failed to load live locations', err);
     }
   };
 
@@ -112,13 +112,19 @@ const BookingScreen = () => {
   }, [ booking, token, bookingId ]);
 
   useEffect(() => {
-    if (!booking || !isMechanic) return undefined;
+    if (!booking) return undefined;
     if (booking.status === 'ACCEPTED' || booking.status === 'IN_PROGRESS') {
       const interval = setInterval(pushLocation, 5000);
       return () => clearInterval(interval);
     }
     return undefined;
-  }, [ booking, isMechanic, liveRiderLocation, token, bookingId ]);
+  }, [ booking, localDeviceLocation, token, bookingId ]);
+
+  useEffect(() => {
+    if (!booking || !localDeviceLocation) return;
+    if (booking.status !== 'ACCEPTED' && booking.status !== 'IN_PROGRESS') return;
+    pushLocation();
+  }, [booking, localDeviceLocation]);
 
   useEffect(() => {
     if (booking?.status === 'COMPLETED' && booking?.completeVerified && !prompted) {
@@ -163,17 +169,23 @@ const BookingScreen = () => {
 
   const ownerLocation = locations.find((loc) => String(loc.userId ?? loc.user?.id) === String(booking?.ownerId));
   const mechanicLocation = locations.find((loc) => String(loc.userId ?? loc.user?.id) === String(booking?.mechanicId));
-  const riderLocation = isMechanic
-    ? (liveRiderLocation || (mechanicLocation ? { latitude: mechanicLocation.latitude, longitude: mechanicLocation.longitude } : null))
-    : (mechanicLocation ? { latitude: mechanicLocation.latitude, longitude: mechanicLocation.longitude } : null);
-  const destinationLocation = ownerLocation
+  const mechanicPoint = mechanicLocation
+    ? { latitude: mechanicLocation.latitude, longitude: mechanicLocation.longitude }
+    : null;
+  const ownerPoint = ownerLocation
     ? { latitude: ownerLocation.latitude, longitude: ownerLocation.longitude }
     : null;
 
+  const riderLocation = isMechanic
+    ? (localDeviceLocation || mechanicPoint)
+    : mechanicPoint;
+  const destinationLocation = isMechanic
+    ? ownerPoint
+    : (ownerPoint || localDeviceLocation);
+
   const handleRiderLocationUpdate = useCallback((location) => {
-    if (!isMechanic) return;
-    setLiveRiderLocation(location);
-  }, [ isMechanic ]);
+    setLocalDeviceLocation(location);
+  }, []);
 
   return (
     <AppShell hideChrome hideSupport>

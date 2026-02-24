@@ -50,20 +50,22 @@ const api = {
     apiClient.request({ path: `/api/live-location/${bookingId}`, token }),
 
   notifications: (token) => apiClient.request({ path: '/api/notifications', token }),
+  markAllNotificationsRead: (token) =>
+    apiClient.request({ path: '/api/notifications/read-all', method: 'POST', token }),
 
   platformReviews: () => apiClient.request({ path: '/api/reviews/platform' }),
   mechanicReviews: (mechanicId) => apiClient.request({ path: `/api/reviews/mechanics/${mechanicId}` }),
   createReview: (token, payload) => apiClient.request({ path: '/api/reviews', method: 'POST', token, body: payload }),
 
-  adminSettings: () => apiClient.request({ path: '/api/admin/settings' }),
-  updateAdminSettings: (payload) =>
-    apiClient.request({ path: '/api/admin/settings', method: 'PUT', body: payload }),
-  adminBanners: () => apiClient.request({ path: '/api/admin/banners' }),
-  uploadBanner: (formData) =>
-    apiClient.request({ path: '/api/admin/banners/upload', method: 'POST', body: formData }),
-  deleteBanner: (id) => apiClient.request({ path: `/api/admin/banners/${id}`, method: 'DELETE' }),
-  updateMechanicVisibility: (id, visible) =>
-    apiClient.request({ path: `/api/admin/mechanics/${id}/visibility/${visible}`, method: 'PUT' }),
+  adminSettings: (token) => apiClient.request({ path: '/api/admin/settings', token }),
+  updateAdminSettings: (token, payload) =>
+    apiClient.request({ path: '/api/admin/settings', method: 'PUT', token, body: payload }),
+  adminBanners: (token) => apiClient.request({ path: '/api/admin/banners', token }),
+  uploadBanner: (token, formData) =>
+    apiClient.request({ path: '/api/admin/banners/upload', method: 'POST', token, body: formData }),
+  deleteBanner: (token, id) => apiClient.request({ path: `/api/admin/banners/${id}`, method: 'DELETE', token }),
+  updateMechanicVisibility: (token, id, visible) =>
+    apiClient.request({ path: `/api/admin/mechanics/${id}/visibility/${visible}`, method: 'PUT', token }),
 
   chat: (message) =>
     apiClient.request({ path: '/api/chat', method: 'POST', body: { message } }),

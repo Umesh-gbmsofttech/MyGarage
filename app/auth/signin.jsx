@@ -23,7 +23,7 @@ const SignInScreen = () => {
       setLoadingDots((prev) => (prev.length >= 3 ? '' : `${prev}.`));
     }, 350);
     return () => clearInterval(interval);
-  }, [loading]);
+  }, [ loading ]);
 
   const handleSignin = async () => {
     if (loading) return;
@@ -47,7 +47,7 @@ const SignInScreen = () => {
       <View style={ styles.container }>
         <Text style={ styles.title }>Sign In</Text>
         <TextInput
-          placeholderTextColor={COLORS.placeholder}
+          placeholderTextColor={ COLORS.placeholder }
           placeholder="Email"
           value={ email }
           onChangeText={ setEmail }
@@ -57,7 +57,7 @@ const SignInScreen = () => {
         />
         <View style={ styles.passwordRow }>
           <TextInput
-            placeholderTextColor={COLORS.placeholder}
+            placeholderTextColor={ '#0B2239' }
             placeholder="Password"
             value={ password }
             onChangeText={ setPassword }

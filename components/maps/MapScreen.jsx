@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker, Polyline, UrlTile } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -47,6 +47,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
   const [durationMinutes, setDurationMinutes] = useState(null);
   const [trackingEnabled, setTrackingEnabled] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [routeError, setRouteError] = useState('');
   const [tileUrlTemplate, setTileUrlTemplate] = useState(
     'https://api.maptiler.com/maps/streets/{z}/{x}/{y}.png?key='
   );
@@ -58,9 +59,9 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
 
   const animateRouteCamera = useCallback((targetRef, origin, destination, points) => {
     if (!targetRef?.current) return;
-    const fitCoords = [origin, destination];
+    const fitCoords = points?.length > 1 ? points : [origin, destination];
     targetRef.current.fitToCoordinates(fitCoords, {
-      edgePadding: { top: 90, right: 70, bottom: 130, left: 70 },
+      edgePadding: { top: 80, right: 80, bottom: 80, left: 80 },
       animated: true,
     });
 
@@ -79,11 +80,33 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
     }, 350);
   }, []);
 
+  const normalizeRouteCoordinates = useCallback((payload) => {
+    const source = Array.isArray(payload?.route) ? payload.route : payload?.geometry;
+    if (!Array.isArray(source)) return [];
+
+    return source
+      .map((point) => {
+        if (Array.isArray(point) && point.length >= 2) {
+          return { latitude: Number(point[1]), longitude: Number(point[0]) };
+        }
+        if (point && typeof point === 'object') {
+          const lat = Number(point.latitude);
+          const lng = Number(point.longitude);
+          if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+            return { latitude: lat, longitude: lng };
+          }
+        }
+        return null;
+      })
+      .filter(Boolean);
+  }, []);
+
   const fetchRoute = useCallback(async (origin, destination) => {
     if (!origin || !destination || routeRequestInFlightRef.current) return false;
     const routeKey = `${origin.latitude.toFixed(6)},${origin.longitude.toFixed(6)}:${destination.latitude.toFixed(6)},${destination.longitude.toFixed(6)}`;
     const cached = routeCacheRef.current.get(routeKey);
     if (cached) {
+      setRouteError('');
       setRouteData(cached.route);
       setRouteSteps(cached.steps);
       setDistanceKm(cached.distanceKm);
@@ -99,16 +122,20 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
     try {
       routeRequestInFlightRef.current = true;
       setRouteLoading(true);
+      setRouteError('');
       const data = await api.mapsDirections({
         originLat: origin.latitude,
         originLng: origin.longitude,
         destinationLat: destination.latitude,
         destinationLng: destination.longitude,
       });
-      const mappedRoute = data?.route || [];
+      const mappedRoute = normalizeRouteCoordinates(data);
       const mappedSteps = data?.steps || [];
       const nextDistanceKm = data?.distanceMeters ? Number(data.distanceMeters) / 1000 : null;
       const nextDurationMinutes = data?.durationSeconds ? Number(data.durationSeconds) / 60 : null;
+      if (mappedRoute.length <= 1) {
+        throw new Error('No route geometry found for this trip.');
+      }
 
       routeCacheRef.current.set(routeKey, {
         route: mappedRoute,
@@ -128,14 +155,17 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
         setTimeout(() => animateRouteCamera(fullMapRef, origin, destination, mappedRoute), 220);
       }
       return true;
-    } catch (_error) {
-      // ignore transient direction errors
+    } catch (error) {
+      const message = error?.message || 'Failed to load route directions.';
+      setRouteError(message);
+      console.error('Direction fetch failed', error);
+      Alert.alert('Directions Error', message);
       return false;
     } finally {
       routeRequestInFlightRef.current = false;
       setRouteLoading(false);
     }
-  }, [animateRouteCamera, isFullScreen]);
+  }, [animateRouteCamera, isFullScreen, normalizeRouteCoordinates]);
 
   useEffect(() => {
     const loadMapConfig = async () => {
@@ -144,8 +174,8 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
         if (data?.tileUrlTemplate) {
           setTileUrlTemplate(data.tileUrlTemplate);
         }
-      } catch (_error) {
-        // keep default maptiler template if config request fails
+      } catch (error) {
+        console.error('Failed to load map config', error);
       }
     };
     loadMapConfig();
@@ -159,6 +189,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
     setDistanceKm(null);
     setDurationMinutes(null);
     setIsRouteVisible(false);
+    setRouteError('');
   }, [destinationLat, destinationLng]);
 
   useEffect(() => {
@@ -166,6 +197,8 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
+          setRouteError('Location permission required for live tracking.');
+          Alert.alert('Permission Required', 'Location permission is required for live tracking.');
           return;
         }
         setTrackingEnabled(true);
@@ -190,7 +223,8 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
           }
         );
       } catch (_error) {
-        // ignore location setup errors
+        console.error('Failed to start location tracking', _error);
+        setRouteError('Failed to initialize live location tracking.');
       }
     };
 
@@ -229,12 +263,41 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
   }, [distanceKm, isRouteVisible, activeRider, destinationLocation]);
 
   const handleDirectionPress = useCallback(async () => {
-    if (!activeRider || !destinationLocation) return;
+    if (!activeRider || !destinationLocation) {
+      const message = 'Both mechanic and owner locations are required to fetch directions.';
+      setRouteError(message);
+      Alert.alert('Location Missing', message);
+      return;
+    }
     const now = Date.now();
     if (now - lastDirectionTapRef.current < 700) return;
     lastDirectionTapRef.current = now;
-    await fetchRoute(activeRider, destinationLocation);
+    const success = await fetchRoute(activeRider, destinationLocation);
+    if (success) {
+      setIsFullScreen(true);
+    }
   }, [activeRider, destinationLocation, fetchRoute]);
+
+  const handleLocatePress = useCallback(() => {
+    if (!activeRider || !destinationLocation) {
+      const target = activeRider || destinationLocation;
+      if (!target) {
+        setRouteError('Waiting for live location updates.');
+        return;
+      }
+      mapRef.current?.animateToRegion(
+        {
+          latitude: target.latitude,
+          longitude: target.longitude,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        },
+        600
+      );
+      return;
+    }
+    animateRouteCamera(mapRef, activeRider, destinationLocation, routeData);
+  }, [activeRider, destinationLocation, animateRouteCamera, routeData]);
 
   const handleOpenFullScreen = useCallback(() => {
     setIsFullScreen(true);
@@ -282,12 +345,12 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
           <TouchableOpacity style={styles.overlayButton} onPress={handleOpenFullScreen}>
             <Ionicons name="expand" size={18} color={COLORS.text} />
           </TouchableOpacity>
-          <View style={styles.distancePill}>
+          <TouchableOpacity style={styles.distancePill} onPress={handleLocatePress}>
             <Ionicons name="location-outline" size={14} color={COLORS.primary} />
             <Text style={styles.distanceText}>
               {displayedDistanceKm !== null ? `${displayedDistanceKm.toFixed(1)} km` : '--'}
             </Text>
-          </View>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.overlayButton, routeLoading && styles.overlayButtonDisabled]}
             onPress={handleDirectionPress}
@@ -301,6 +364,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
           {durationMinutes !== null && isRouteVisible ? (
             <Text style={styles.infoText}>Duration: {Math.round(durationMinutes)} min</Text>
           ) : null}
+          {routeError ? <Text style={styles.infoErrorText}>{routeError}</Text> : null}
           <Text style={styles.infoText}>{statusText}</Text>
         </View>
       </View>
@@ -529,6 +593,10 @@ const styles = StyleSheet.create({
   },
   infoText: {
     color: '#F8FAFC',
+    fontSize: 12,
+  },
+  infoErrorText: {
+    color: '#FCA5A5',
     fontSize: 12,
   },
   stepsContainer: {
