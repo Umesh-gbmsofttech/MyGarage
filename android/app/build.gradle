@@ -96,8 +96,8 @@ android {
         versionName "1.0.0"
         externalNativeBuild {
             cmake {
-                // Prevent Windows MAX_PATH failures in generated new-architecture codegen object files.
-                arguments "-DCMAKE_OBJECT_PATH_MAX=180"
+                // Aggressively shorten object paths to avoid Windows MAX_PATH failures.
+                arguments "-DCMAKE_OBJECT_PATH_MAX=64"
             }
         }
 

@@ -1,5 +1,5 @@
 ﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, ScrollView, StyleSheet, Text, ToastAndroid, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as Location from 'expo-location';
@@ -10,6 +10,14 @@ import api from '../../src/services/api';
 const MAPLIBRE_STYLE_URL = 'https://demotiles.maplibre.org/style.json';
 const isExpoGo = Constants.appOwnership === 'expo';
 const MapLibreGL = !isExpoGo ? require('@maplibre/maplibre-react-native').default : null;
+
+const showRouteUnavailableToast = () => {
+  if (Platform.OS === 'android') {
+    ToastAndroid.show('Route unavailable', ToastAndroid.SHORT);
+    return;
+  }
+  Alert.alert('Route unavailable');
+};
 
 const haversineMeters = (a, b) => {
   const R = 6371000;
@@ -75,29 +83,31 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
   }, []);
 
   const normalizeRouteCoordinates = useCallback((payload) => {
-    const source = Array.isArray(payload?.geometry) ? payload.geometry : payload?.route;
-    if (!Array.isArray(source)) return [];
+    const source = payload?.geometry;
+    if (!Array.isArray(source)) {
+      console.warn('Route geometry missing or invalid');
+      return [];
+    }
 
-    return source
+    const normalized = source
       .map((point) => {
-        if (Array.isArray(point) && point.length >= 2) {
-          const lng = Number(point[0]);
-          const lat = Number(point[1]);
-          if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
-            return [lng, lat];
-          }
+        if (!Array.isArray(point) || point.length < 2) {
           return null;
         }
-        if (point && typeof point === 'object') {
-          const lat = Number(point.latitude);
-          const lng = Number(point.longitude);
-          if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
-            return [lng, lat];
-          }
+        const lng = Number(point[0]);
+        const lat = Number(point[1]);
+        if (Number.isNaN(lat) || Number.isNaN(lng)) {
+          return null;
         }
-        return null;
+        return [lng, lat];
       })
       .filter(Boolean);
+
+    if (normalized.length <= 1) {
+      console.warn('Route geometry malformed or too short');
+      return [];
+    }
+    return normalized;
   }, []);
 
   const fetchRoute = useCallback(
@@ -135,7 +145,8 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
 
         const mappedRoute = normalizeRouteCoordinates(data);
         if (mappedRoute.length <= 1) {
-          throw new Error('No route geometry found for this trip.');
+          showRouteUnavailableToast();
+          throw new Error('Route unavailable');
         }
 
         const mappedSteps = data?.steps || [];
@@ -270,6 +281,8 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
     }
   }, [activeRider, destinationLocation, fetchRoute]);
 
+  const directionDisabled = routeLoading || !activeRider || !destinationLocation;
+
   const handleLocatePress = useCallback(() => {
     if (!activeRider && !destinationLocation) {
       setRouteError('Waiting for live location updates.');
@@ -370,9 +383,13 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
           <TouchableOpacity
             style={[styles.overlayButton, routeLoading && styles.overlayButtonDisabled]}
             onPress={handleDirectionPress}
-            disabled={routeLoading}
+            disabled={directionDisabled}
           >
-            <Ionicons name="navigate" size={18} color={COLORS.primary} />
+            {routeLoading ? (
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            ) : (
+              <Ionicons name="navigate" size={18} color={COLORS.primary} />
+            )}
           </TouchableOpacity>
         </View>
 
@@ -413,9 +430,13 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
             <TouchableOpacity
               style={[styles.overlayButtonDark, routeLoading && styles.overlayButtonDisabled]}
               onPress={handleDirectionPress}
-              disabled={routeLoading}
+              disabled={directionDisabled}
             >
-              <Ionicons name="navigate" size={18} color="#FFFFFF" />
+              {routeLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Ionicons name="navigate" size={18} color="#FFFFFF" />
+              )}
             </TouchableOpacity>
           </View>
 

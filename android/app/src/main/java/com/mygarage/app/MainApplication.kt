@@ -11,13 +11,10 @@ import com.facebook.react.ReactHost
 import com.facebook.react.common.ReleaseLevel
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint
 import com.facebook.react.defaults.DefaultReactNativeHost
-import com.facebook.react.soloader.OpenSourceMergedSoMapping
-import com.facebook.react.views.view.WindowUtilKt
 import com.facebook.soloader.SoLoader
 
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
-import java.io.IOException
 
 class MainApplication : Application(), ReactApplication {
 
@@ -49,11 +46,7 @@ class MainApplication : Application(), ReactApplication {
       ReleaseLevel.STABLE
     }
 
-    try {
-      SoLoader.init(this, OpenSourceMergedSoMapping.INSTANCE)
-    } catch (error: IOException) {
-      throw RuntimeException(error)
-    }
+    SoLoader.init(this, false)
 
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
       // Keep New Architecture enabled (required by worklets/reanimated), but disable bridgeless
@@ -63,10 +56,6 @@ class MainApplication : Application(), ReactApplication {
         fabricEnabled = true,
         bridgelessEnabled = false
       )
-    }
-
-    if (BuildConfig.IS_EDGE_TO_EDGE_ENABLED) {
-      WindowUtilKt.setEdgeToEdgeFeatureFlagOn()
     }
 
     ApplicationLifecycleDispatcher.onApplicationCreate(this)
