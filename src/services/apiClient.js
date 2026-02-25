@@ -16,7 +16,10 @@ const request = async ({ path, method = 'GET', token, body }) => {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const base = API_URL.endsWith('/api') && path.startsWith('/api') ? `${API_URL}${path.slice(4)}` : `${API_URL}${path}`;
+  const base = path.startsWith('http') 
+    ? path 
+    : (API_URL.endsWith('/api') && path.startsWith('/api') ? `${API_URL}${path.slice(4)}` : `${API_URL}${path}`);
+
   const response = await fetch(base, {
     method,
     headers,

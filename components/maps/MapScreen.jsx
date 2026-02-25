@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Modal, Platform, ScrollView, StyleSheet, Text
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as Location from 'expo-location';
+import { BASE_URL } from '../../api';
 import COLORS from '../../theme/colors';
 import { Skeleton } from '../utility/Skeleton';
 import api from '../../src/services/api';
@@ -111,6 +112,14 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
   const [mapStyle, setMapStyle] = useState(null);
   const [mapStyleError, setMapStyleError] = useState('');
 
+  const getFullImageUrl = useCallback((url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    const cleanBase = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
+    const cleanPath = url.startsWith('/') ? url : `/${url}`;
+    return `${cleanBase}${cleanPath}`;
+  }, []);
+
   // Animation for rider
   const animatedRiderLng = useRef(new Animated.Value(riderLocation?.longitude || 0)).current;
   const animatedRiderLat = useRef(new Animated.Value(riderLocation?.latitude || 0)).current;
@@ -118,6 +127,9 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
 
   useEffect(() => {
     if (riderLocation) {
+      if (!riderCoord) {
+        setRiderCoord([riderLocation.longitude, riderLocation.latitude]);
+      }
       Animated.parallel([
         Animated.timing(animatedRiderLng, {
           toValue: riderLocation.longitude,
@@ -482,48 +494,52 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
     setIsFullScreen(true);
   }, []);
 
-  const renderTrackingMap = (targetCameraRef) => (
-    <MapLibreGL.MapView
-      style={styles.map}
-      mapStyle={mapStyle}
-      logoEnabled={false}
-      attributionEnabled={false}
-      onDidFailLoadingMap={(event) => {
-        console.error('Map style/tile load failed', event?.nativeEvent || event);
-      }}
-    >
-      {mapCenter && (
-        <MapLibreGL.Camera
-          ref={targetCameraRef}
-          centerCoordinate={[mapCenter.longitude, mapCenter.latitude]}
-          zoomLevel={14}
-        />
-      )}
+  const renderTrackingMap = (targetCameraRef) => {
+    const fullRiderUrl = getFullImageUrl(riderImage);
+    const fullDestinationUrl = getFullImageUrl(destinationImage);
 
-      {isRouteVisible && routeData.length > 1 && (
-        <MapLibreGL.ShapeSource
-          id={targetCameraRef === fullCameraRef ? fullRouteSourceId : mainRouteSourceId}
-          shape={routeFeature}
-        >
-          <MapLibreGL.LineLayer
-            id={`routeLine-${targetCameraRef === fullCameraRef ? 'full' : 'main'}`}
-            sourceID={targetCameraRef === fullCameraRef ? fullRouteSourceId : mainRouteSourceId}
-            style={{
-              lineColor: COLORS.primary,
-              lineWidth: 4,
-              lineCap: 'round',
-              lineJoin: 'round',
-            }}
-          />
-        </MapLibreGL.ShapeSource>
-      )}
-
-      <MapLibreGL.Images
-        images={{
-          riderIcon: riderImage ? { uri: riderImage } : require('../../assets/images/profile.png'),
-          destinationIcon: destinationImage ? { uri: destinationImage } : require('../../assets/images/profile.png'),
+    return (
+      <MapLibreGL.MapView
+        style={styles.map}
+        mapStyle={mapStyle}
+        logoEnabled={false}
+        attributionEnabled={false}
+        onDidFailLoadingMap={(event) => {
+          console.error('Map style/tile load failed', event?.nativeEvent || event);
         }}
-      />
+      >
+        {mapCenter && (
+          <MapLibreGL.Camera
+            ref={targetCameraRef}
+            centerCoordinate={[mapCenter.longitude, mapCenter.latitude]}
+            zoomLevel={14}
+          />
+        )}
+
+        {isRouteVisible && routeData.length > 1 && (
+          <MapLibreGL.ShapeSource
+            id={targetCameraRef === fullCameraRef ? fullRouteSourceId : mainRouteSourceId}
+            shape={routeFeature}
+          >
+            <MapLibreGL.LineLayer
+              id={`routeLine-${targetCameraRef === fullCameraRef ? 'full' : 'main'}`}
+              sourceID={targetCameraRef === fullCameraRef ? fullRouteSourceId : mainRouteSourceId}
+              style={{
+                lineColor: COLORS.primary,
+                lineWidth: 4,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+            />
+          </MapLibreGL.ShapeSource>
+        )}
+
+        <MapLibreGL.Images
+          images={{
+            riderIcon: fullRiderUrl ? { uri: fullRiderUrl } : require('../../assets/images/profile.png'),
+            destinationIcon: fullDestinationUrl ? { uri: fullDestinationUrl } : require('../../assets/images/profile.png'),
+          }}
+        />
 
       {riderCoord && (
         <MapLibreGL.ShapeSource
@@ -537,7 +553,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
             id={`mechanicLayer-${targetCameraRef === fullCameraRef ? 'full' : 'main'}`}
             style={{
               iconImage: 'riderIcon',
-              iconSize: 0.08,
+              iconSize: 0.4,
               iconAllowOverlap: true,
               textField: 'Mechanic',
               textColor: '#FFFFFF',
@@ -562,7 +578,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
             id={`ownerLayer-${targetCameraRef === fullCameraRef ? 'full' : 'main'}`}
             style={{
               iconImage: 'destinationIcon',
-              iconSize: 0.08,
+              iconSize: 0.4,
               iconAllowOverlap: true,
               textField: 'Vehicle Owner',
               textColor: '#FFFFFF',
@@ -575,7 +591,8 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
         </MapLibreGL.ShapeSource>
       )}
     </MapLibreGL.MapView>
-  );
+    );
+  };
 
   if (!mapCenter) {
     return (
