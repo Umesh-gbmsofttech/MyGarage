@@ -5,6 +5,7 @@ import { useAuth } from '../src/context/AuthContext';
 import api from '../src/services/api';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import COLORS from '../theme/colors';
+import useLoadingDots from '../src/hooks/useLoadingDots';
 
 const RatingScreen = () => {
   const { token } = useAuth();
@@ -12,20 +13,30 @@ const RatingScreen = () => {
   const { mechanicId } = useLocalSearchParams();
   const [rating, setRating] = useState('5');
   const [comment, setComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const submittingDots = useLoadingDots(submitting);
 
   const handleSubmit = async () => {
+    if (submitting) return;
     if (!token) {
       Alert.alert('Please login', 'Please login to submit a review.');
       return;
     }
-    await api.createReview(token, {
-      type: mechanicId ? 'MECHANIC' : 'PLATFORM',
-      mechanicId: mechanicId ? Number(mechanicId) : undefined,
-      rating: Number(rating),
-      comment,
-    });
-    Alert.alert('Thanks!', 'Your review has been submitted.');
-    router.replace('/');
+    try {
+      setSubmitting(true);
+      await api.createReview(token, {
+        type: mechanicId ? 'MECHANIC' : 'PLATFORM',
+        mechanicId: mechanicId ? Number(mechanicId) : undefined,
+        rating: Number(rating),
+        comment,
+      });
+      Alert.alert('Thanks!', 'Your review has been submitted.');
+      router.replace('/');
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to submit review.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -41,8 +52,8 @@ const RatingScreen = () => {
           placeholderTextColor={COLORS.placeholder}
           multiline
         />
-        <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}>
-          <Text style={styles.primaryButtonText}>Submit Review</Text>
+        <TouchableOpacity style={[styles.primaryButton, submitting && styles.primaryButtonDisabled]} onPress={handleSubmit} disabled={submitting}>
+          <Text style={styles.primaryButtonText}>{submitting ? `Submitting${submittingDots}` : 'Submit Review'}</Text>
         </TouchableOpacity>
       </View>
     </AppShell>
@@ -76,6 +87,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
+  },
+  primaryButtonDisabled: {
+    opacity: 0.8,
   },
   primaryButtonText: {
     color: '#FFFFFF',

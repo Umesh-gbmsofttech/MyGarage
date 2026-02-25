@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../src/context/AuthContext';
 import { useRouter } from 'expo-router';
 import COLORS from '../../theme/colors';
+import useLoadingDots from '../../src/hooks/useLoadingDots';
 
 const SignInScreen = () => {
   const { signin } = useAuth();
@@ -12,18 +13,7 @@ const SignInScreen = () => {
   const [ password, setPassword ] = useState('');
   const [ showPassword, setShowPassword ] = useState(false);
   const [ loading, setLoading ] = useState(false);
-  const [ loadingDots, setLoadingDots ] = useState('');
-
-  useEffect(() => {
-    if (!loading) {
-      setLoadingDots('');
-      return;
-    }
-    const interval = setInterval(() => {
-      setLoadingDots((prev) => (prev.length >= 3 ? '' : `${prev}.`));
-    }, 350);
-    return () => clearInterval(interval);
-  }, [ loading ]);
+  const loadingDots = useLoadingDots(loading);
 
   const handleSignin = async () => {
     if (loading) return;

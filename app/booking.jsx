@@ -7,6 +7,7 @@ import { useAuth } from '../src/context/AuthContext';
 import api from '../src/services/api';
 import COLORS from '../theme/colors';
 import { Skeleton, SkeletonRow } from '../components/utility/Skeleton';
+import useLoadingDots from '../src/hooks/useLoadingDots';
 
 const BookingScreen = () => {
   const { bookingId } = useLocalSearchParams();
@@ -19,7 +20,9 @@ const BookingScreen = () => {
   const [ locations, setLocations ] = useState([]);
   const [ localDeviceLocation, setLocalDeviceLocation ] = useState(null);
   const [ prompted, setPrompted ] = useState(false);
+  const [ actionLoading, setActionLoading ] = useState('');
   const isMechanic = useMemo(() => user?.role === 'MECHANIC', [ user ]);
+  const loadingDots = useLoadingDots(Boolean(actionLoading));
 
   const loadBooking = useCallback(async (showLoading = true) => {
     if (!token || !user) return;
@@ -137,33 +140,45 @@ const BookingScreen = () => {
   }, [ booking, prompted ]);
 
   const handleVerifyMeet = async () => {
+    if (actionLoading) return;
     try {
+      setActionLoading('verifyMeet');
       const updated = await api.verifyMeetOtp(token, bookingId, { code: otpMeet });
       setBooking(updated);
       setOtpMeet('');
       Alert.alert('Success', 'Meet OTP verified');
     } catch (err) {
       Alert.alert('Error', err.message || 'OTP verification failed');
+    } finally {
+      setActionLoading('');
     }
   };
 
   const handleVerifyComplete = async () => {
+    if (actionLoading) return;
     try {
+      setActionLoading('verifyComplete');
       const updated = await api.verifyCompleteOtp(token, bookingId, { code: otpComplete });
       setBooking(updated);
       setOtpComplete('');
       Alert.alert('Success', 'Completion OTP verified');
     } catch (err) {
       Alert.alert('Error', err.message || 'OTP verification failed');
+    } finally {
+      setActionLoading('');
     }
   };
 
   const handleGenerateCompleteOtp = async () => {
+    if (actionLoading) return;
     try {
+      setActionLoading('generateComplete');
       const updated = await api.generateCompleteOtp(token, bookingId);
       setBooking(updated);
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to generate completion OTP');
+    } finally {
+      setActionLoading('');
     }
   };
 
@@ -225,8 +240,10 @@ const BookingScreen = () => {
             </>
           ) }
           { !isMechanic && booking && booking.meetVerified && !booking.completeOtp && (
-            <TouchableOpacity style={ styles.primaryButton } onPress={ handleGenerateCompleteOtp }>
-              <Text style={ styles.primaryButtonText }>Service Done</Text>
+            <TouchableOpacity style={ [ styles.primaryButton, actionLoading && styles.buttonDisabled ] } onPress={ handleGenerateCompleteOtp } disabled={ Boolean(actionLoading) }>
+              <Text style={ styles.primaryButtonText }>
+                { actionLoading === 'generateComplete' ? `Submitting${loadingDots}` : 'Service Done' }
+              </Text>
             </TouchableOpacity>
           ) }
           { !isMechanic && booking && booking.completeOtp && (
@@ -246,8 +263,10 @@ const BookingScreen = () => {
                 style={ styles.input }
                 keyboardType="numeric"
               />
-              <TouchableOpacity style={ styles.secondaryButton } onPress={ handleVerifyMeet }>
-                <Text style={ styles.secondaryButtonText }>Verify Meet OTP</Text>
+              <TouchableOpacity style={ [ styles.secondaryButton, actionLoading && styles.buttonDisabled ] } onPress={ handleVerifyMeet } disabled={ Boolean(actionLoading) }>
+                <Text style={ styles.secondaryButtonText }>
+                  { actionLoading === 'verifyMeet' ? `Sending${loadingDots}` : 'Verify Meet OTP' }
+                </Text>
               </TouchableOpacity>
             </>
           ) }
@@ -261,8 +280,10 @@ const BookingScreen = () => {
                 style={ styles.input }
                 keyboardType="numeric"
               />
-              <TouchableOpacity style={ styles.secondaryButton } onPress={ handleVerifyComplete }>
-                <Text style={ styles.secondaryButtonText }>Verify Completion OTP</Text>
+              <TouchableOpacity style={ [ styles.secondaryButton, actionLoading && styles.buttonDisabled ] } onPress={ handleVerifyComplete } disabled={ Boolean(actionLoading) }>
+                <Text style={ styles.secondaryButtonText }>
+                  { actionLoading === 'verifyComplete' ? `Sending${loadingDots}` : 'Verify Completion OTP' }
+                </Text>
               </TouchableOpacity>
             </>
           ) }
@@ -323,6 +344,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     alignItems: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.8,
   },
   secondaryButtonText: {
     color: COLORS.primary,

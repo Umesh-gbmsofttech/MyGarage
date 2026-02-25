@@ -4,6 +4,7 @@ import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../src/context/AuthContext';
 import COLORS from '../../theme/colors';
 import api from '../../src/services/api';
+import useLoadingDots from '../../src/hooks/useLoadingDots';
 
 const FAQS = [
   {
@@ -37,6 +38,7 @@ const SupportChatScreen = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const sendingDots = useLoadingDots(sending);
 
   const username = useMemo(() => {
     return user?.firstName || user?.name || 'there';
@@ -48,7 +50,7 @@ const SupportChatScreen = () => {
   }, [username]);
 
   const sendMessage = async (text) => {
-    if (!text.trim()) return;
+    if (sending || !text.trim()) return;
     const outgoing = { id: `user-${Date.now()}`, from: 'user', text };
     setMessages((prev) => [...prev, outgoing]);
     setInput('');
@@ -78,7 +80,7 @@ const SupportChatScreen = () => {
           <View style={styles.chatCard}>
             <View style={styles.chipsRow}>
               {FAQS.map((item) => (
-                <TouchableOpacity key={item.id} style={styles.chip} onPress={() => sendMessage(item.question)}>
+                <TouchableOpacity key={item.id} style={[styles.chip, sending && styles.chipDisabled]} onPress={() => sendMessage(item.question)} disabled={sending}>
                   <Text style={styles.chipText}>{item.question}</Text>
                 </TouchableOpacity>
               ))}
@@ -112,9 +114,10 @@ const SupportChatScreen = () => {
             value={input}
             onChangeText={setInput}
             style={styles.input}
+            editable={!sending}
           />
-          <TouchableOpacity style={styles.sendButton} onPress={() => sendMessage(input)}>
-            <Text style={styles.sendButtonText}>Send</Text>
+          <TouchableOpacity style={[styles.sendButton, sending && styles.sendButtonDisabled]} onPress={() => sendMessage(input)} disabled={sending}>
+            <Text style={styles.sendButtonText}>{sending ? `Sending${sendingDots}` : 'Send'}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -151,6 +154,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
+  },
+  chipDisabled: {
+    opacity: 0.6,
   },
   chipText: {
     color: COLORS.primary,
@@ -209,6 +215,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 16,
     justifyContent: 'center',
+  },
+  sendButtonDisabled: {
+    opacity: 0.8,
   },
   sendButtonText: {
     color: '#FFFFFF',

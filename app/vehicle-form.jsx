@@ -5,6 +5,7 @@ import AppShell from '../components/layout/AppShell';
 import { useAuth } from '../src/context/AuthContext';
 import api from '../src/services/api';
 import COLORS from '../theme/colors';
+import useLoadingDots from '../src/hooks/useLoadingDots';
 
 const defaultGuides = {
   regular: 'Keep up with oil changes, air filter checks, and brake inspections every 6 months.',
@@ -27,8 +28,11 @@ export default function VehicleForm() {
   const [ fuelType, setFuelType ] = useState('');
   const [ issue, setIssue ] = useState('');
   const [ result, setResult ] = useState(null);
+  const [ submitting, setSubmitting ] = useState(false);
+  const submittingDots = useLoadingDots(submitting);
 
   const handleSubmit = async () => {
+    if (submitting) return;
     if (!vehicleType || !model || !fuelType) {
       Alert.alert('Error', 'Please fill all fields.');
       return;
@@ -49,6 +53,7 @@ export default function VehicleForm() {
     }
 
     try {
+      setSubmitting(true);
       const booking = await api.createBooking(token, {
         mechanicId: Number(mechanicId),
         vehicleMake: vehicleType,
@@ -59,6 +64,8 @@ export default function VehicleForm() {
       router.replace({ pathname: '/booking', params: { bookingId: booking.id } });
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to create booking');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -84,8 +91,10 @@ export default function VehicleForm() {
             multiline
           />
         ) }
-        <TouchableOpacity style={ styles.primaryButton } onPress={ handleSubmit }>
-          <Text style={ styles.primaryButtonText }>{ mode === 'diy' ? 'Get DIY Result' : 'Continue' }</Text>
+        <TouchableOpacity style={ [ styles.primaryButton, submitting && styles.primaryButtonDisabled ] } onPress={ handleSubmit } disabled={ submitting }>
+          <Text style={ styles.primaryButtonText }>
+            { submitting ? `Submitting${submittingDots}` : mode === 'diy' ? 'Get DIY Result' : 'Continue' }
+          </Text>
         </TouchableOpacity>
 
         { result && (
@@ -129,6 +138,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
+  },
+  primaryButtonDisabled: {
+    opacity: 0.8,
   },
   primaryButtonText: { color: '#FFFFFF', fontWeight: '700' },
   resultCard: {

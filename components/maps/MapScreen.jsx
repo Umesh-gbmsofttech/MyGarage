@@ -7,7 +7,6 @@ import COLORS from '../../theme/colors';
 import { Skeleton } from '../utility/Skeleton';
 import api from '../../src/services/api';
 
-const MAPLIBRE_STYLE_URL = 'https://demotiles.maplibre.org/style.json';
 const isExpoGo = Constants.appOwnership === 'expo';
 let MapLibreGL = null;
 if (!isExpoGo) {
@@ -18,6 +17,45 @@ if (!isExpoGo) {
     MapLibreGL = null;
   }
 }
+
+const OSM_FALLBACK_STYLE = {
+  version: 8,
+  name: 'OSM Raster',
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [
+    {
+      id: 'osm-layer',
+      type: 'raster',
+      source: 'osm',
+    },
+  ],
+};
+
+const buildRasterStyle = (tileUrlTemplate) => ({
+  version: 8,
+  name: 'MapTiler Raster',
+  sources: {
+    maptiler: {
+      type: 'raster',
+      tiles: [tileUrlTemplate],
+      tileSize: 256,
+    },
+  },
+  layers: [
+    {
+      id: 'maptiler-raster-layer',
+      type: 'raster',
+      source: 'maptiler',
+    },
+  ],
+});
 
 const showRouteUnavailableToast = () => {
   if (Platform.OS === 'android') {
@@ -37,6 +75,15 @@ const haversineMeters = (a, b) => {
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
   return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+};
+
+const hasSameCoordinates = (a, b) => {
+  if (!a || !b) return false;
+  const epsilon = 0.00001;
+  return (
+    Math.abs(Number(a.latitude) - Number(b.latitude)) < epsilon &&
+    Math.abs(Number(a.longitude) - Number(b.longitude)) < epsilon
+  );
 };
 
 const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }) => {
@@ -61,6 +108,8 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState('');
   const [trackingError, setTrackingError] = useState('');
+  const [mapStyle, setMapStyle] = useState(null);
+  const [mapStyleError, setMapStyleError] = useState('');
 
   const activeRider = riderLocation || deviceLocation;
   const mapCenter = activeRider || destinationLocation || null;
@@ -138,6 +187,11 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
     async (origin, destination, options = {}) => {
       const forceRefresh = Boolean(options.forceRefresh);
       if (!origin || !destination || routeRequestInFlightRef.current) return false;
+      if (hasSameCoordinates(origin, destination)) {
+        const message = 'Mechanic and owner are at the same location. No route needed.';
+        setRouteError(message);
+        return false;
+      }
 
       const routeKey = `${origin.latitude.toFixed(6)},${origin.longitude.toFixed(6)}:${destination.latitude.toFixed(6)},${destination.longitude.toFixed(6)}`;
       const cached = routeCacheRef.current.get(routeKey);
@@ -224,6 +278,37 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
   }, [destinationLat, destinationLng]);
 
   useEffect(() => {
+    if (!MapLibreGL) return;
+    let cancelled = false;
+
+    const loadMapStyle = async () => {
+      try {
+        const config = await api.mapsConfig();
+        const tileUrlTemplate = config?.tileUrlTemplate;
+        if (typeof tileUrlTemplate === 'string' && tileUrlTemplate.trim()) {
+          if (!cancelled) {
+            setMapStyle(buildRasterStyle(tileUrlTemplate.trim()));
+            setMapStyleError('');
+          }
+          return;
+        }
+        throw new Error('Tile template missing from map config');
+      } catch (error) {
+        console.error('Failed to load map tile config. Falling back to OSM.', error);
+        if (!cancelled) {
+          setMapStyle(OSM_FALLBACK_STYLE);
+          setMapStyleError('Using fallback map tiles.');
+        }
+      }
+    };
+
+    loadMapStyle();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const startTracking = async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -281,6 +366,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
 
   useEffect(() => {
     if (!activeRider || !destinationLocation || autoRouteTriggeredRef.current || routeLoading) return;
+    if (hasSameCoordinates(activeRider, destinationLocation)) return;
     autoRouteTriggeredRef.current = true;
     fetchRoute(activeRider, destinationLocation, { forceRefresh: false });
   }, [activeRider, destinationLocation, fetchRoute, routeLoading]);
@@ -306,6 +392,12 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
       const message = 'Both mechanic and owner locations are required to fetch directions.';
       setRouteError(message);
       Alert.alert('Location Missing', message);
+      return;
+    }
+    if (hasSameCoordinates(activeRider, destinationLocation)) {
+      const message = 'Mechanic and owner are at the same location. No route needed.';
+      setRouteError(message);
+      showRouteUnavailableToast();
       return;
     }
     const now = Date.now();
@@ -345,7 +437,15 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
   }, []);
 
   const renderTrackingMap = (targetCameraRef) => (
-    <MapLibreGL.MapView style={styles.map} styleURL={MAPLIBRE_STYLE_URL} logoEnabled={false} attributionEnabled={false}>
+    <MapLibreGL.MapView
+      style={styles.map}
+      mapStyle={mapStyle}
+      logoEnabled={false}
+      attributionEnabled={false}
+      onDidFailLoadingMap={(event) => {
+        console.error('Map style/tile load failed', event?.nativeEvent || event);
+      }}
+    >
       {mapCenter && (
         <MapLibreGL.Camera
           ref={targetCameraRef}
@@ -416,6 +516,15 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
     );
   }
 
+  if (!mapStyle) {
+    return (
+      <View style={styles.skeletonContainer}>
+        <Skeleton height={240} width="100%" style={styles.skeletonMap} />
+        <Skeleton height={14} width="70%" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.mapWrap}>
@@ -450,6 +559,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
           ) : null}
           {routeError ? <Text style={styles.infoErrorText}>{routeError}</Text> : null}
           {trackingError ? <Text style={styles.infoErrorText}>{trackingError}</Text> : null}
+          {mapStyleError ? <Text style={styles.infoErrorText}>{mapStyleError}</Text> : null}
           <Text style={styles.infoText}>{statusText}</Text>
         </View>
       </View>

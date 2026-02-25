@@ -4,21 +4,32 @@ import AppShell from '../components/layout/AppShell';
 import { useAuth } from '../src/context/AuthContext';
 import api from '../src/services/api';
 import COLORS from '../theme/colors';
+import useLoadingDots from '../src/hooks/useLoadingDots';
 
 const FeedbackScreen = () => {
   const { token } = useAuth();
   const [rating, setRating] = useState('5');
   const [comment, setComment] = useState('');
   const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const submittingDots = useLoadingDots(submitting);
 
   const handleSubmit = async () => {
+    if (submitting) return;
     if (!token) {
       setMessage('Please login to send feedback.');
       return;
     }
-    await api.createReview(token, { type: 'PLATFORM', rating: Number(rating), comment });
-    setMessage('Thanks for the feedback!');
-    setComment('');
+    try {
+      setSubmitting(true);
+      await api.createReview(token, { type: 'PLATFORM', rating: Number(rating), comment });
+      setMessage('Thanks for the feedback!');
+      setComment('');
+    } catch (err) {
+      setMessage(err.message || 'Failed to submit feedback.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -34,8 +45,8 @@ const FeedbackScreen = () => {
           placeholderTextColor={COLORS.placeholder}
           multiline
         />
-        <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}>
-          <Text style={styles.primaryButtonText}>Submit</Text>
+        <TouchableOpacity style={[styles.primaryButton, submitting && styles.primaryButtonDisabled]} onPress={handleSubmit} disabled={submitting}>
+          <Text style={styles.primaryButtonText}>{submitting ? `Submitting${submittingDots}` : 'Submit'}</Text>
         </TouchableOpacity>
         {message ? <Text style={styles.message}>{message}</Text> : null}
       </View>
@@ -69,6 +80,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
+  },
+  primaryButtonDisabled: {
+    opacity: 0.8,
   },
   primaryButtonText: {
     color: '#FFFFFF',

@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import apiBase from '../../../api';
 import colors from '../../../theme/colors';
 import { Skeleton, SkeletonRow } from '../../../components/utility/Skeleton';
+import useLoadingDots from '../../../src/hooks/useLoadingDots';
 
 const ProfileScreen = () => {
   const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -30,6 +31,16 @@ const ProfileScreen = () => {
   const [ mechanicReviews, setMechanicReviews ] = useState([]);
   const [ signoutConfirmVisible, setSignoutConfirmVisible ] = useState(false);
   const [ profilePreviewVisible, setProfilePreviewVisible ] = useState(false);
+  const [ saveLoading, setSaveLoading ] = useState(false);
+  const [ settingsLoading, setSettingsLoading ] = useState(false);
+  const [ deleteBannerId, setDeleteBannerId ] = useState(null);
+  const [ visibilityLoading, setVisibilityLoading ] = useState(false);
+  const [ profileImageUploading, setProfileImageUploading ] = useState(false);
+  const saveDots = useLoadingDots(saveLoading);
+  const settingsDots = useLoadingDots(settingsLoading);
+  const deleteDots = useLoadingDots(Boolean(deleteBannerId));
+  const visibilityDots = useLoadingDots(visibilityLoading);
+  const profileImageDots = useLoadingDots(profileImageUploading);
 
   const ensureMediaPermission = async (onDenied) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -128,17 +139,29 @@ const ProfileScreen = () => {
   }, [ token, loadProfile ]);
 
   const handleSave = async () => {
+    if (saveLoading) return;
     try {
+      setSaveLoading(true);
       const updated = await api.updateProfile(token, edit);
       setProfile(updated);
+      return true;
     } catch (err) {
       setError(err.message || 'Failed to update profile');
+      return false;
+    } finally {
+      setSaveLoading(false);
     }
   };
 
   const handleToggleSettings = async (value) => {
-    const updated = await api.updateAdminSettings(token, { showAllMechanics: value });
-    setAdminSettings(updated);
+    if (settingsLoading) return;
+    try {
+      setSettingsLoading(true);
+      const updated = await api.updateAdminSettings(token, { showAllMechanics: value });
+      setAdminSettings(updated);
+    } finally {
+      setSettingsLoading(false);
+    }
   };
 
   const handlePickBanner = async () => {
@@ -207,14 +230,25 @@ const ProfileScreen = () => {
   };
 
   const handleDeleteBanner = async (bannerId) => {
-    await api.deleteBanner(token, bannerId);
-    const refreshed = await api.adminBanners(token);
-    setBanners(refreshed);
+    if (deleteBannerId) return;
+    try {
+      setDeleteBannerId(bannerId);
+      await api.deleteBanner(token, bannerId);
+      const refreshed = await api.adminBanners(token);
+      setBanners(refreshed);
+    } finally {
+      setDeleteBannerId(null);
+    }
   };
 
   const handleVisibility = async () => {
-    if (!mechanicId) return;
-    await api.updateMechanicVisibility(token, mechanicId, mechanicVisible);
+    if (!mechanicId || visibilityLoading) return;
+    try {
+      setVisibilityLoading(true);
+      await api.updateMechanicVisibility(token, mechanicId, mechanicVisible);
+    } finally {
+      setVisibilityLoading(false);
+    }
   };
 
   const isAdmin = profile?.role === 'ADMIN';
@@ -252,6 +286,7 @@ const ProfileScreen = () => {
           return;
         }
         try {
+          setProfileImageUploading(true);
           const formData = new FormData();
           formData.append('file', {
             uri: asset.uri,
@@ -262,6 +297,8 @@ const ProfileScreen = () => {
           await loadProfile();
         } catch (err) {
           setError(err.message || 'Failed to upload profile image');
+        } finally {
+          setProfileImageUploading(false);
         }
       }
     } catch (_err) {
@@ -393,8 +430,10 @@ const ProfileScreen = () => {
                 <Switch
                   value={ !!adminSettings?.showAllMechanics }
                   onValueChange={ handleToggleSettings }
+                  disabled={ settingsLoading }
                 />
               </View>
+              { settingsLoading ? <Text style={ styles.switchHint }>Saving settings{ settingsDots }</Text> : null }
 
               <View style={ styles.divider } />
 
@@ -425,8 +464,10 @@ const ProfileScreen = () => {
                     source={ { uri: `${apiBase.replace('/api', '')}${banner.imageUrl}` } }
                     style={ styles.bannerImage }
                   />
-                  <TouchableOpacity onPress={ () => handleDeleteBanner(banner.id) }>
-                    <Text style={ styles.linkDanger }>Delete</Text>
+                  <TouchableOpacity onPress={ () => handleDeleteBanner(banner.id) } disabled={ Boolean(deleteBannerId) }>
+                    <Text style={ styles.linkDanger }>
+                      { deleteBannerId === banner.id ? `Deleting${deleteDots}` : 'Delete' }
+                    </Text>
                   </TouchableOpacity>
                 </View>
               )) }
@@ -445,8 +486,10 @@ const ProfileScreen = () => {
                 <Text style={ styles.switchLabel }>Visible</Text>
                 <Switch value={ mechanicVisible } onValueChange={ setMechanicVisible } />
               </View>
-              <TouchableOpacity style={ styles.primaryButton } onPress={ handleVisibility }>
-                <Text style={ styles.primaryButtonText }>Update Visibility</Text>
+              <TouchableOpacity style={ [ styles.primaryButton, visibilityLoading && styles.buttonDisabled ] } onPress={ handleVisibility } disabled={ visibilityLoading }>
+                <Text style={ styles.primaryButtonText }>
+                  { visibilityLoading ? `Submitting${visibilityDots}` : 'Update Visibility' }
+                </Text>
               </TouchableOpacity>
             </View>
           </>
@@ -478,8 +521,10 @@ const ProfileScreen = () => {
         <View style={ styles.modalBackdrop }>
           <View style={ styles.modalContent }>
             <Text style={ styles.sectionTitle }>Edit Profile</Text>
-            <TouchableOpacity style={ styles.secondaryButton } onPress={ handlePickProfileImage }>
-              <Text style={ styles.secondaryButtonText }>Change Profile Image</Text>
+            <TouchableOpacity style={ [ styles.secondaryButton, profileImageUploading && styles.buttonDisabled ] } onPress={ handlePickProfileImage } disabled={ profileImageUploading }>
+              <Text style={ styles.secondaryButtonText }>
+                { profileImageUploading ? `Uploading${profileImageDots}` : 'Change Profile Image' }
+              </Text>
             </TouchableOpacity>
             <TextInput
               placeholderTextColor={ colors.placeholder }
@@ -570,8 +615,8 @@ const ProfileScreen = () => {
               </>
             ) }
 
-            <TouchableOpacity style={ styles.primaryButton } onPress={ async () => { await handleSave(); setIsEditing(false); } }>
-              <Text style={ styles.primaryButtonText }>Save Profile</Text>
+            <TouchableOpacity style={ [ styles.primaryButton, saveLoading && styles.buttonDisabled ] } onPress={ async () => { const ok = await handleSave(); if (ok) setIsEditing(false); } } disabled={ saveLoading }>
+              <Text style={ styles.primaryButtonText }>{ saveLoading ? `Saving${saveDots}` : 'Save Profile' }</Text>
             </TouchableOpacity>
             <TouchableOpacity style={ styles.secondaryButton } onPress={ () => setIsEditing(false) }>
               <Text style={ styles.secondaryButtonText }>Cancel</Text>

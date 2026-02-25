@@ -6,6 +6,7 @@ import { useAuth } from '../../src/context/AuthContext';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
 import colors from '../../theme/colors';
+import useLoadingDots from '../../src/hooks/useLoadingDots';
 
 const SignUpScreen = () => {
   const { signupOwner, signupMechanic } = useAuth();
@@ -13,6 +14,7 @@ const SignUpScreen = () => {
   const [ role, setRole ] = useState('VEHICLE_OWNER');
   const [ showPassword, setShowPassword ] = useState(false);
   const [ profileImage, setProfileImage ] = useState(null);
+  const [ submitting, setSubmitting ] = useState(false);
   const [ form, setForm ] = useState({
     name: '',
     surname: '',
@@ -26,6 +28,7 @@ const SignUpScreen = () => {
   });
 
   const update = (key, value) => setForm((prev) => ({ ...prev, [ key ]: value }));
+  const submittingDots = useLoadingDots(submitting);
 
   const ensureMediaPermission = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -52,7 +55,9 @@ const SignUpScreen = () => {
   };
 
   const handleSignup = async () => {
+    if (submitting) return;
     try {
+      setSubmitting(true);
       if (role === 'VEHICLE_OWNER') {
         if (!form.name || !form.surname || !form.mobile || !form.email) {
           Alert.alert('Error', 'Please fill all fields.');
@@ -109,10 +114,13 @@ const SignUpScreen = () => {
       router.replace('/');
     } catch (err) {
       Alert.alert('Error', err.message || 'Signup failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handlePickImage = async () => {
+    if (submitting) return;
     try {
       const allowed = await ensureMediaPermission();
       if (!allowed) {
@@ -153,18 +161,20 @@ const SignUpScreen = () => {
           <TouchableOpacity
             style={ [ styles.roleButton, role === 'VEHICLE_OWNER' && styles.roleButtonActive ] }
             onPress={ () => setRole('VEHICLE_OWNER') }
+            disabled={ submitting }
           >
             <Text style={ [ styles.roleText, role === 'VEHICLE_OWNER' && styles.roleTextActive ] }>Vehicle Owner</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={ [ styles.roleButton, role === 'MECHANIC' && styles.roleButtonActive ] }
             onPress={ () => setRole('MECHANIC') }
+            disabled={ submitting }
           >
             <Text style={ [ styles.roleText, role === 'MECHANIC' && styles.roleTextActive ] }>Mechanic</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={ styles.imagePicker } onPress={ handlePickImage }>
+        <TouchableOpacity style={ styles.imagePicker } onPress={ handlePickImage } disabled={ submitting }>
           { profileImage ? (
             <Image source={ { uri: profileImage.uri } } style={ styles.profilePreview } />
           ) : (
@@ -185,7 +195,7 @@ const SignUpScreen = () => {
             style={ [ styles.input, styles.passwordInput ] }
             secureTextEntry={ !showPassword }
           />
-          <TouchableOpacity style={ styles.eyeButton } onPress={ () => setShowPassword((prev) => !prev) }>
+          <TouchableOpacity style={ styles.eyeButton } onPress={ () => setShowPassword((prev) => !prev) } disabled={ submitting }>
             <Text style={ styles.eyeText }>{ showPassword ? 'Hide' : 'Show' }</Text>
           </TouchableOpacity>
         </View>
@@ -202,10 +212,10 @@ const SignUpScreen = () => {
           </>
         ) }
 
-        <TouchableOpacity style={ styles.primaryButton } onPress={ handleSignup }>
-          <Text style={ styles.primaryButtonText }>Create Account</Text>
+        <TouchableOpacity style={ [ styles.primaryButton, submitting && styles.primaryButtonDisabled ] } onPress={ handleSignup } disabled={ submitting }>
+          <Text style={ styles.primaryButtonText }>{ submitting ? `Submitting${submittingDots}` : 'Create Account' }</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={ () => router.push('/auth/signin') }>
+        <TouchableOpacity onPress={ () => router.push('/auth/signin') } disabled={ submitting }>
           <Text style={ styles.link }>Already have an account? Sign in</Text>
         </TouchableOpacity>
       </View>
@@ -295,6 +305,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
+  },
+  primaryButtonDisabled: {
+    opacity: 0.8,
   },
   primaryButtonText: {
     color: '#FFFFFF',

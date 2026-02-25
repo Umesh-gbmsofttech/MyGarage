@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import COLORS from '../../theme/colors';
 import { Skeleton, SkeletonRow } from '../../components/utility/Skeleton';
 import { emitNotificationBadgeRefresh } from '../../src/utils/notificationBadgeEvents';
+import useLoadingDots from '../../src/hooks/useLoadingDots';
 
 const sortBookings = (list) => {
   return [...list].sort((a, b) => {
@@ -26,6 +27,9 @@ const BookingsScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [error, setError] = useState('');
+  const [respondingKey, setRespondingKey] = useState('');
+  const responding = Boolean(respondingKey);
+  const respondingDots = useLoadingDots(responding);
   const load = useCallback(async (showLoading = true) => {
     if (!user || !token) return;
     if (showLoading) setLoading(true);
@@ -54,13 +58,18 @@ const BookingsScreen = () => {
   }, [load]);
 
   const handleRespond = async (bookingId, status) => {
+    const actionKey = `${bookingId}:${status}`;
+    if (respondingKey) return;
     try {
+      setRespondingKey(actionKey);
       await api.respondBooking(token, bookingId, { status });
       const updated = user.role === 'MECHANIC' ? await api.mechanicBookings(token) : await api.ownerBookings(token);
       setBookings(sortBookings(updated));
       emitNotificationBadgeRefresh();
     } catch (err) {
       setError(err.message || 'Failed to respond');
+    } finally {
+      setRespondingKey('');
     }
   };
 
@@ -128,16 +137,22 @@ const BookingsScreen = () => {
                   {user.role === 'MECHANIC' && booking.status === 'PENDING' && (
                     <View style={styles.inlineActions}>
                       <TouchableOpacity
-                        style={styles.acceptButton}
+                        style={[styles.acceptButton, respondingKey && styles.actionDisabled]}
                         onPress={() => handleRespond(booking.id, 'ACCEPTED')}
+                        disabled={Boolean(respondingKey)}
                       >
-                        <Text style={styles.primaryButtonText}>Accept</Text>
+                        <Text style={styles.primaryButtonText}>
+                          {respondingKey === `${booking.id}:ACCEPTED` ? `Sending${respondingDots}` : 'Accept'}
+                        </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={styles.declineButton}
+                        style={[styles.declineButton, respondingKey && styles.actionDisabled]}
                         onPress={() => handleRespond(booking.id, 'DECLINED')}
+                        disabled={Boolean(respondingKey)}
                       >
-                        <Text style={styles.primaryButtonText}>Decline</Text>
+                        <Text style={styles.primaryButtonText}>
+                          {respondingKey === `${booking.id}:DECLINED` ? `Sending${respondingDots}` : 'Decline'}
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -250,6 +265,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     alignItems: 'center',
+  },
+  actionDisabled: {
+    opacity: 0.8,
   },
   emptyState: {
     backgroundColor: COLORS.card,
