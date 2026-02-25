@@ -36,6 +36,7 @@ const ProfileScreen = () => {
   const [ deleteBannerId, setDeleteBannerId ] = useState(null);
   const [ visibilityLoading, setVisibilityLoading ] = useState(false);
   const [ profileImageUploading, setProfileImageUploading ] = useState(false);
+  const [ selectedProfileImage, setSelectedProfileImage ] = useState(null);
   const saveDots = useLoadingDots(saveLoading);
   const settingsDots = useLoadingDots(settingsLoading);
   const deleteDots = useLoadingDots(Boolean(deleteBannerId));
@@ -285,24 +286,31 @@ const ProfileScreen = () => {
           );
           return;
         }
-        try {
-          setProfileImageUploading(true);
-          const formData = new FormData();
-          formData.append('file', {
-            uri: asset.uri,
-            name: asset.fileName || 'profile.jpg',
-            type: asset.mimeType || asset.type || 'image/jpeg',
-          });
-          await api.uploadProfileImage(token, formData);
-          await loadProfile();
-        } catch (err) {
-          setError(err.message || 'Failed to upload profile image');
-        } finally {
-          setProfileImageUploading(false);
-        }
+        setSelectedProfileImage(asset);
+        setError('');
       }
     } catch (_err) {
       setError('Failed to open image library.');
+    }
+  };
+
+  const handleUploadProfileImage = async () => {
+    if (!selectedProfileImage) return;
+    try {
+      setProfileImageUploading(true);
+      const formData = new FormData();
+      formData.append('file', {
+        uri: selectedProfileImage.uri,
+        name: selectedProfileImage.fileName || 'profile.jpg',
+        type: selectedProfileImage.mimeType || selectedProfileImage.type || 'image/jpeg',
+      });
+      await api.uploadProfileImage(token, formData);
+      await loadProfile();
+      setSelectedProfileImage(null);
+    } catch (err) {
+      setError(err.message || 'Failed to upload profile image');
+    } finally {
+      setProfileImageUploading(false);
     }
   };
 
@@ -521,11 +529,30 @@ const ProfileScreen = () => {
         <View style={ styles.modalBackdrop }>
           <View style={ styles.modalContent }>
             <Text style={ styles.sectionTitle }>Edit Profile</Text>
-            <TouchableOpacity style={ [ styles.secondaryButton, profileImageUploading && styles.buttonDisabled ] } onPress={ handlePickProfileImage } disabled={ profileImageUploading }>
-              <Text style={ styles.secondaryButtonText }>
-                { profileImageUploading ? `Uploading${profileImageDots}` : 'Change Profile Image' }
-              </Text>
-            </TouchableOpacity>
+            
+            <View style={ styles.editAvatarContainer }>
+              <TouchableOpacity style={ [ styles.secondaryButton, profileImageUploading && styles.buttonDisabled ] } onPress={ handlePickProfileImage } disabled={ profileImageUploading }>
+                <Text style={ styles.secondaryButtonText }>
+                  { selectedProfileImage ? 'Change Selected' : 'Select New Photo' }
+                </Text>
+              </TouchableOpacity>
+              
+              { selectedProfileImage && (
+                <View style={ styles.selectedImagePreviewContainer }>
+                  <Image source={{ uri: selectedProfileImage.uri }} style={ styles.selectedImagePreview } />
+                  <TouchableOpacity 
+                    style={ [ styles.primaryButton, profileImageUploading && styles.buttonDisabled ] } 
+                    onPress={ handleUploadProfileImage } 
+                    disabled={ profileImageUploading }
+                  >
+                    <Text style={ styles.primaryButtonText }>
+                      { profileImageUploading ? `Uploading${profileImageDots}` : 'Upload Photo' }
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) }
+            </View>
+
             <TextInput
               placeholderTextColor={ colors.placeholder }
               placeholder="First name"
@@ -718,6 +745,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  editAvatarContainer: {
+    gap: 10,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  selectedImagePreviewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+    padding: 10,
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  selectedImagePreview: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
   profileAvatar: {
     width: 56,

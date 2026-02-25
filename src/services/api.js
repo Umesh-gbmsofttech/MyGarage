@@ -44,8 +44,6 @@ const api = {
 
   updateLocation: (token, bookingId, payload) =>
     apiClient.request({ path: `/api/locations/bookings/${bookingId}`, method: 'POST', token, body: payload }),
-  getLocations: (token, bookingId) =>
-    apiClient.request({ path: `/api/locations/bookings/${bookingId}`, token }),
   getLiveLocation: (token, bookingId) =>
     apiClient.request({ path: `/api/live-location/${bookingId}`, token }),
 

@@ -12,7 +12,7 @@ const GetStartedScreen = () => {
         <TouchableOpacity style={ styles.skipButton } onPress={ () => router.replace('/') }>
           <Text style={ styles.skipText }>Skip</Text>
         </TouchableOpacity>
-        <Text style={ styles.title }>Let's get you moving</Text>
+        <Text style={ styles.title }>Let&apos;s get you moving</Text>
         <Text style={ styles.subtitle }>Create an account or sign in to book mechanics.</Text>
         <TouchableOpacity style={ styles.primaryButton } onPress={ () => router.push('/auth/signup') }>
           <Text style={ styles.primaryButtonText }>Create Account</Text>

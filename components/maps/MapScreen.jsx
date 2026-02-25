@@ -1,5 +1,5 @@
 ﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, ScrollView, StyleSheet, Text, ToastAndroid, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, ScrollView, StyleSheet, Text, ToastAndroid, TouchableOpacity, View, Image, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as Location from 'expo-location';
@@ -86,7 +86,7 @@ const hasSameCoordinates = (a, b) => {
   );
 };
 
-const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }) => {
+const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, riderImage, destinationImage }) => {
   const cameraRef = useRef(null);
   const fullCameraRef = useRef(null);
   const watchRef = useRef(null);
@@ -110,6 +110,41 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
   const [trackingError, setTrackingError] = useState('');
   const [mapStyle, setMapStyle] = useState(null);
   const [mapStyleError, setMapStyleError] = useState('');
+
+  // Animation for rider
+  const animatedRiderLng = useRef(new Animated.Value(riderLocation?.longitude || 0)).current;
+  const animatedRiderLat = useRef(new Animated.Value(riderLocation?.latitude || 0)).current;
+  const [riderCoord, setRiderCoord] = useState(riderLocation ? [riderLocation.longitude, riderLocation.latitude] : null);
+
+  useEffect(() => {
+    if (riderLocation) {
+      Animated.parallel([
+        Animated.timing(animatedRiderLng, {
+          toValue: riderLocation.longitude,
+          duration: 2000,
+          useNativeDriver: false,
+        }),
+        Animated.timing(animatedRiderLat, {
+          toValue: riderLocation.latitude,
+          duration: 2000,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    }
+  }, [riderLocation]);
+
+  useEffect(() => {
+    const listenerId = animatedRiderLng.addListener(({ value }) => {
+      setRiderCoord(prev => [value, prev ? prev[1] : 0]);
+    });
+    const latListenerId = animatedRiderLat.addListener(({ value }) => {
+      setRiderCoord(prev => [prev ? prev[0] : 0, value]);
+    });
+    return () => {
+      animatedRiderLng.removeListener(listenerId);
+      animatedRiderLat.removeListener(latListenerId);
+    };
+  }, []);
 
   const activeRider = riderLocation || deviceLocation;
   const mapCenter = activeRider || destinationLocation || null;
@@ -472,13 +507,19 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
         </MapLibreGL.ShapeSource>
       )}
 
-      {riderCoordinate && (
-        <MapLibreGL.PointAnnotation id={`mechanic-${targetCameraRef === fullCameraRef ? 'full' : 'main'}`} coordinate={riderCoordinate}>
+      {riderCoord && (
+        <MapLibreGL.PointAnnotation id={`mechanic-${targetCameraRef === fullCameraRef ? 'full' : 'main'}`} coordinate={riderCoord}>
           <View style={styles.markerWrap}>
             <View style={styles.markerLabel}>
               <Text style={styles.markerLabelText}>Mechanic</Text>
             </View>
-            <View style={styles.mechanicMarker} />
+            <View style={styles.profileMarkerContainer}>
+              {riderImage ? (
+                <Image source={{ uri: riderImage }} style={styles.profileImage} />
+              ) : (
+                <View style={[styles.mechanicMarker, { margin: 0 }]} />
+              )}
+            </View>
           </View>
         </MapLibreGL.PointAnnotation>
       )}
@@ -489,7 +530,13 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate }
             <View style={styles.markerLabel}>
               <Text style={styles.markerLabelText}>Vehicle Owner</Text>
             </View>
-            <View style={styles.ownerMarker} />
+            <View style={styles.profileMarkerContainer}>
+              {destinationImage ? (
+                <Image source={{ uri: destinationImage }} style={styles.profileImage} />
+              ) : (
+                <View style={[styles.ownerMarker, { margin: 0 }]} />
+              )}
+            </View>
           </View>
         </MapLibreGL.PointAnnotation>
       )}
@@ -677,6 +724,25 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
     backgroundColor: COLORS.accentWarm,
+  },
+  profileMarkerContainer: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#FFFFFF',
+    padding: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  profileImage: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
   },
   markerWrap: {
     alignItems: 'center',

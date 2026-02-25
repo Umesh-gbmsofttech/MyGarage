@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import AppShell from '../components/layout/AppShell';
 import MapScreen from '../components/maps/MapScreen';
@@ -204,91 +204,98 @@ const BookingScreen = () => {
 
   return (
     <AppShell hideChrome hideSupport>
-      <View style={ styles.container }>
-        { loading && (
-          <View style={ styles.card }>
-            <Skeleton height={ 18 } width="40%" />
-            <SkeletonRow lines={ 3 } lineHeight={ 12 } />
-          </View>
-        ) }
-        { booking && (
-          <View style={ styles.card }>
-            <Text style={ styles.title }>Booking #{ booking.id }</Text>
-            <Text style={ styles.text }>Status: { booking.status }</Text>
-            <Text style={ styles.text }>Vehicle: { booking.vehicleMake } { booking.vehicleModel }</Text>
-            <Text style={ styles.text }>Issue: { booking.issueDescription }</Text>
-          </View>
-        ) }
-
-        { (booking?.status === 'ACCEPTED' || booking?.status === 'IN_PROGRESS') && (
-          <View style={ styles.card }>
-            <Text style={ styles.sectionTitle }>Live Tracking</Text>
-            <MapScreen
-              riderLocation={ riderLocation }
-              destinationLocation={ destinationLocation }
-              onRiderLocationUpdate={ handleRiderLocationUpdate }
-            />
-          </View>
-        ) }
-
-        <View style={ styles.card }>
-          <Text style={ styles.sectionTitle }>OTP Verification</Text>
-          { !isMechanic && booking && !booking.meetVerified && (
-            <>
-              <Text style={ styles.text }>Meet OTP: { booking.meetOtp || 'Pending' }</Text>
-              <Text style={ styles.text }>Share this with mechanic</Text>
-            </>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={styles.container}>
+          { loading && (
+            <View style={ styles.card }>
+              <Skeleton height={ 18 } width="40%" />
+              <SkeletonRow lines={ 3 } lineHeight={ 12 } />
+            </View>
           ) }
-          { !isMechanic && booking && booking.meetVerified && !booking.completeOtp && (
-            <TouchableOpacity style={ [ styles.primaryButton, actionLoading && styles.buttonDisabled ] } onPress={ handleGenerateCompleteOtp } disabled={ Boolean(actionLoading) }>
-              <Text style={ styles.primaryButtonText }>
-                { actionLoading === 'generateComplete' ? `Submitting${loadingDots}` : 'Service Done' }
-              </Text>
-            </TouchableOpacity>
-          ) }
-          { !isMechanic && booking && booking.completeOtp && (
-            <>
-              <Text style={ styles.text }>Completion OTP: { booking.completeOtp }</Text>
-              <Text style={ styles.text }>Share this with mechanic</Text>
-            </>
+          { booking && (
+            <View style={ styles.card }>
+              <Text style={ styles.title }>Booking #{ booking.id }</Text>
+              <Text style={ styles.text }>Status: { booking.status }</Text>
+              <Text style={ styles.text }>Vehicle: { booking.vehicleMake } { booking.vehicleModel }</Text>
+              <Text style={ styles.text }>Issue: { booking.issueDescription }</Text>
+            </View>
           ) }
 
-          { isMechanic && booking && !booking.meetVerified && (
-            <>
-              <TextInput
-                placeholder="Enter Meet OTP"
-                placeholderTextColor={ COLORS.placeholder }
-                value={ otpMeet }
-                onChangeText={ setOtpMeet }
-                style={ styles.input }
-                keyboardType="numeric"
+          { (booking?.status === 'ACCEPTED' || booking?.status === 'IN_PROGRESS') && (
+            <View style={ styles.card }>
+              <Text style={ styles.sectionTitle }>Live Tracking</Text>
+              <MapScreen
+                riderLocation={ riderLocation }
+                destinationLocation={ destinationLocation }
+                onRiderLocationUpdate={ handleRiderLocationUpdate }
+                riderImage={ booking?.mechanicProfileImageUrl }
+                destinationImage={ booking?.ownerProfileImageUrl }
               />
-              <TouchableOpacity style={ [ styles.secondaryButton, actionLoading && styles.buttonDisabled ] } onPress={ handleVerifyMeet } disabled={ Boolean(actionLoading) }>
-                <Text style={ styles.secondaryButtonText }>
-                  { actionLoading === 'verifyMeet' ? `Sending${loadingDots}` : 'Verify Meet OTP' }
+            </View>
+          ) }
+
+          <View style={ styles.card }>
+            <Text style={ styles.sectionTitle }>OTP Verification</Text>
+            { !isMechanic && booking && !booking.meetVerified && (
+              <>
+                <Text style={ styles.text }>Meet OTP: { booking.meetOtp || 'Pending' }</Text>
+                <Text style={ styles.text }>Share this with mechanic</Text>
+              </>
+            ) }
+            { !isMechanic && booking && booking.meetVerified && !booking.completeOtp && (
+              <TouchableOpacity style={ [ styles.primaryButton, actionLoading && styles.buttonDisabled ] } onPress={ handleGenerateCompleteOtp } disabled={ Boolean(actionLoading) }>
+                <Text style={ styles.primaryButtonText }>
+                  { actionLoading === 'generateComplete' ? `Submitting${loadingDots}` : 'Service Done' }
                 </Text>
               </TouchableOpacity>
-            </>
-          ) }
-          { isMechanic && booking && booking.meetVerified && !booking.completeVerified && (
-            <>
-              <TextInput
-                placeholder="Enter Completion OTP"
-                placeholderTextColor={ COLORS.placeholder }
-                value={ otpComplete }
-                onChangeText={ setOtpComplete }
-                style={ styles.input }
-                keyboardType="numeric"
-              />
-              <TouchableOpacity style={ [ styles.secondaryButton, actionLoading && styles.buttonDisabled ] } onPress={ handleVerifyComplete } disabled={ Boolean(actionLoading) }>
-                <Text style={ styles.secondaryButtonText }>
-                  { actionLoading === 'verifyComplete' ? `Sending${loadingDots}` : 'Verify Completion OTP' }
-                </Text>
-              </TouchableOpacity>
-            </>
-          ) }
-        </View>
-      </View>
+            ) }
+            { !isMechanic && booking && booking.completeOtp && (
+              <>
+                <Text style={ styles.text }>Completion OTP: { booking.completeOtp }</Text>
+                <Text style={ styles.text }>Share this with mechanic</Text>
+              </>
+            ) }
+
+            { isMechanic && booking && !booking.meetVerified && (
+              <>
+                <TextInput
+                  placeholder="Enter Meet OTP"
+                  placeholderTextColor={ COLORS.placeholder }
+                  value={ otpMeet }
+                  onChangeText={ setOtpMeet }
+                  style={ styles.input }
+                  keyboardType="numeric"
+                />
+                <TouchableOpacity style={ [ styles.secondaryButton, actionLoading && styles.buttonDisabled ] } onPress={ handleVerifyMeet } disabled={ Boolean(actionLoading) }>
+                  <Text style={ styles.secondaryButtonText }>
+                    { actionLoading === 'verifyMeet' ? `Sending${loadingDots}` : 'Verify Meet OTP' }
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) }
+            { isMechanic && booking && booking.meetVerified && !booking.completeVerified && (
+              <>
+                <TextInput
+                  placeholder="Enter Completion OTP"
+                  placeholderTextColor={ COLORS.placeholder }
+                  value={ otpComplete }
+                  onChangeText={ setOtpComplete }
+                  style={ styles.input }
+                  keyboardType="numeric"
+                />
+                <TouchableOpacity style={ [ styles.secondaryButton, actionLoading && styles.buttonDisabled ] } onPress={ handleVerifyComplete } disabled={ Boolean(actionLoading) }>
+                  <Text style={ styles.secondaryButtonText }>
+                    { actionLoading === 'verifyComplete' ? `Sending${loadingDots}` : 'Verify Completion OTP' }
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) }
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </AppShell>
   );
 };

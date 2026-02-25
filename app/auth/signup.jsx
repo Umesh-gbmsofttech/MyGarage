@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Image, Linking, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Linking, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../src/context/AuthContext';
@@ -155,77 +155,82 @@ const SignUpScreen = () => {
 
   return (
     <AppShell hideChrome hideSupport>
-      <View style={ styles.container }>
-        <Text style={ styles.title }>Create Account</Text>
-        <View style={ styles.roleSwitch }>
-          <TouchableOpacity
-            style={ [ styles.roleButton, role === 'VEHICLE_OWNER' && styles.roleButtonActive ] }
-            onPress={ () => setRole('VEHICLE_OWNER') }
-            disabled={ submitting }
-          >
-            <Text style={ [ styles.roleText, role === 'VEHICLE_OWNER' && styles.roleTextActive ] }>Vehicle Owner</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={ [ styles.roleButton, role === 'MECHANIC' && styles.roleButtonActive ] }
-            onPress={ () => setRole('MECHANIC') }
-            disabled={ submitting }
-          >
-            <Text style={ [ styles.roleText, role === 'MECHANIC' && styles.roleTextActive ] }>Mechanic</Text>
-          </TouchableOpacity>
-        </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={ styles.container } bounces={false}>
+          <Text style={ styles.title }>Create Account</Text>
+          <View style={ styles.roleSwitch }>
+            <TouchableOpacity
+              style={ [ styles.roleButton, role === 'VEHICLE_OWNER' && styles.roleButtonActive ] }
+              onPress={ () => setRole('VEHICLE_OWNER') }
+              disabled={ submitting }
+            >
+              <Text style={ [ styles.roleText, role === 'VEHICLE_OWNER' && styles.roleTextActive ] }>Vehicle Owner</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={ [ styles.roleButton, role === 'MECHANIC' && styles.roleButtonActive ] }
+              onPress={ () => setRole('MECHANIC') }
+              disabled={ submitting }
+            >
+              <Text style={ [ styles.roleText, role === 'MECHANIC' && styles.roleTextActive ] }>Mechanic</Text>
+            </TouchableOpacity>
+          </View>
 
-        <TouchableOpacity style={ styles.imagePicker } onPress={ handlePickImage } disabled={ submitting }>
-          { profileImage ? (
-            <Image source={ { uri: profileImage.uri } } style={ styles.profilePreview } />
-          ) : (
-            <Text style={ styles.imagePickerText }>Select Profile Image</Text>
+          <TouchableOpacity style={ styles.imagePicker } onPress={ handlePickImage } disabled={ submitting }>
+            { profileImage ? (
+              <Image source={ { uri: profileImage.uri } } style={ styles.profilePreview } />
+            ) : (
+              <Text style={ styles.imagePickerText }>Select Profile Image</Text>
+            ) }
+          </TouchableOpacity>
+
+          <TextInput placeholderTextColor={ colors.placeholder } placeholder="Name" value={ form.name } onChangeText={ (v) => update('name', v) } style={ styles.input } />
+          <TextInput placeholderTextColor={ colors.placeholder } placeholder="Surname" value={ form.surname } onChangeText={ (v) => update('surname', v) } style={ styles.input } />
+          <TextInput placeholderTextColor={ colors.placeholder } placeholder="Mobile" value={ form.mobile } onChangeText={ (v) => update('mobile', v) } style={ styles.input } />
+          <TextInput placeholderTextColor={ colors.placeholder } placeholder="Email" value={ form.email } onChangeText={ (v) => update('email', v) } style={ styles.input } />
+          <View style={ styles.passwordRow }>
+            <TextInput
+              placeholderTextColor={ colors.placeholder }
+              placeholder="Password"
+              value={ form.password }
+              onChangeText={ (v) => update('password', v) }
+              style={ [ styles.input, styles.passwordInput ] }
+              secureTextEntry={ !showPassword }
+            />
+            <TouchableOpacity style={ styles.eyeButton } onPress={ () => setShowPassword((prev) => !prev) } disabled={ submitting }>
+              <Text style={ styles.eyeText }>{ showPassword ? 'Hide' : 'Show' }</Text>
+            </TouchableOpacity>
+          </View>
+
+          { role === 'MECHANIC' && (
+            <>
+              <TextInput placeholderTextColor={ colors.placeholder } placeholder="Experience" value={ form.experience } onChangeText={ (v) => update('experience', v) } style={ styles.input } />
+              <TextInput placeholderTextColor={ colors.placeholder } placeholder="Speciality" value={ form.speciality } onChangeText={ (v) => update('speciality', v) } style={ styles.input } />
+              <TextInput placeholderTextColor={ colors.placeholder } placeholder="City" value={ form.city } onChangeText={ (v) => update('city', v) } style={ styles.input } />
+              <View style={ styles.switchRow }>
+                <Text style={ styles.switchLabel }>Shop active</Text>
+                <Switch value={ form.shopActive } onValueChange={ (v) => update('shopActive', v) } />
+              </View>
+            </>
           ) }
-        </TouchableOpacity>
 
-        <TextInput placeholderTextColor={ colors.placeholder } placeholder="Name" value={ form.name } onChangeText={ (v) => update('name', v) } style={ styles.input } />
-        <TextInput placeholderTextColor={ colors.placeholder } placeholder="Surname" value={ form.surname } onChangeText={ (v) => update('surname', v) } style={ styles.input } />
-        <TextInput placeholderTextColor={ colors.placeholder } placeholder="Mobile" value={ form.mobile } onChangeText={ (v) => update('mobile', v) } style={ styles.input } />
-        <TextInput placeholderTextColor={ colors.placeholder } placeholder="Email" value={ form.email } onChangeText={ (v) => update('email', v) } style={ styles.input } />
-        <View style={ styles.passwordRow }>
-          <TextInput
-            placeholderTextColor={ colors.placeholder }
-            placeholder="Password"
-            value={ form.password }
-            onChangeText={ (v) => update('password', v) }
-            style={ [ styles.input, styles.passwordInput ] }
-            secureTextEntry={ !showPassword }
-          />
-          <TouchableOpacity style={ styles.eyeButton } onPress={ () => setShowPassword((prev) => !prev) } disabled={ submitting }>
-            <Text style={ styles.eyeText }>{ showPassword ? 'Hide' : 'Show' }</Text>
+          <TouchableOpacity style={ [ styles.primaryButton, submitting && styles.primaryButtonDisabled ] } onPress={ handleSignup } disabled={ submitting }>
+            <Text style={ styles.primaryButtonText }>{ submitting ? `Submitting${submittingDots}` : 'Create Account' }</Text>
           </TouchableOpacity>
-        </View>
-
-        { role === 'MECHANIC' && (
-          <>
-            <TextInput placeholderTextColor={ colors.placeholder } placeholder="Experience" value={ form.experience } onChangeText={ (v) => update('experience', v) } style={ styles.input } />
-            <TextInput placeholderTextColor={ colors.placeholder } placeholder="Speciality" value={ form.speciality } onChangeText={ (v) => update('speciality', v) } style={ styles.input } />
-            <TextInput placeholderTextColor={ colors.placeholder } placeholder="City" value={ form.city } onChangeText={ (v) => update('city', v) } style={ styles.input } />
-            <View style={ styles.switchRow }>
-              <Text style={ styles.switchLabel }>Shop active</Text>
-              <Switch value={ form.shopActive } onValueChange={ (v) => update('shopActive', v) } />
-            </View>
-          </>
-        ) }
-
-        <TouchableOpacity style={ [ styles.primaryButton, submitting && styles.primaryButtonDisabled ] } onPress={ handleSignup } disabled={ submitting }>
-          <Text style={ styles.primaryButtonText }>{ submitting ? `Submitting${submittingDots}` : 'Create Account' }</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={ () => router.push('/auth/signin') } disabled={ submitting }>
-          <Text style={ styles.link }>Already have an account? Sign in</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity onPress={ () => router.push('/auth/signin') } disabled={ submitting }>
+            <Text style={ styles.link }>Already have an account? Sign in</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </AppShell>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
     gap: 12,
@@ -344,5 +349,3 @@ const styles = StyleSheet.create({
 });
 
 export default SignUpScreen;
-
-

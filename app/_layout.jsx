@@ -132,10 +132,36 @@ const UpdatePrompt = () => {
   );
 };
 
+import { BASE_URL } from '../api';
+
+const KeepAlive = () => {
+  useEffect(() => {
+    const pingServer = async () => {
+      try {
+        await fetch(BASE_URL);
+        console.log('Keep-alive ping sent to:', BASE_URL);
+      } catch (error) {
+        console.error('Keep-alive ping failed:', error);
+      }
+    };
+
+    // Ping immediately on mount
+    pingServer();
+
+    // Set interval for 14 minutes (14 * 60 * 1000 ms)
+    const intervalId = setInterval(pingServer, 14 * 60 * 1000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  return null;
+};
+
 export default function RootLayout() {
   return (
     <AuthProvider>
       <AuthGate>
+        <KeepAlive />
         <UpdatePrompt />
         <Stack screenOptions={{ headerShown: false }} initialRouteName="welcome">
           <Stack.Screen name="(tabs)" />

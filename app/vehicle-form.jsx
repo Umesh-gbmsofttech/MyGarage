@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import AppShell from '../components/layout/AppShell';
 import { useAuth } from '../src/context/AuthContext';
 import api from '../src/services/api';
@@ -76,44 +76,49 @@ export default function VehicleForm() {
 
   return (
     <AppShell hideChrome hideSupport>
-      <View style={ styles.container }>
-        <Text style={ styles.heading }>Vehicle Information</Text>
-        <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Vehicle Type" style={ styles.input } value={ vehicleType } onChangeText={ setVehicleType } />
-        <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Model" style={ styles.input } value={ model } onChangeText={ setModel } />
-        <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Fuel Type" style={ styles.input } value={ fuelType } onChangeText={ setFuelType } />
-        { mode !== 'diy' && (
-          <TextInput
-            placeholderTextColor={ COLORS.placeholder }
-            placeholder="Describe the issue"
-            style={ styles.input }
-            value={ issue }
-            onChangeText={ setIssue }
-            multiline
-          />
-        ) }
-        <TouchableOpacity style={ [ styles.primaryButton, submitting && styles.primaryButtonDisabled ] } onPress={ handleSubmit } disabled={ submitting }>
-          <Text style={ styles.primaryButtonText }>
-            { submitting ? `Submitting${submittingDots}` : mode === 'diy' ? 'Get DIY Result' : 'Continue' }
-          </Text>
-        </TouchableOpacity>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={ styles.container } bounces={false}>
+          <Text style={ styles.heading }>Vehicle Information</Text>
+          <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Vehicle Type" style={ styles.input } value={ vehicleType } onChangeText={ setVehicleType } />
+          <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Model" style={ styles.input } value={ model } onChangeText={ setModel } />
+          <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Fuel Type" style={ styles.input } value={ fuelType } onChangeText={ setFuelType } />
+          { mode !== 'diy' && (
+            <TextInput
+              placeholderTextColor={ COLORS.placeholder }
+              placeholder="Describe the issue"
+              style={ styles.input }
+              value={ issue }
+              onChangeText={ setIssue }
+              multiline
+            />
+          ) }
+          <TouchableOpacity style={ [ styles.primaryButton, submitting && styles.primaryButtonDisabled ] } onPress={ handleSubmit } disabled={ submitting }>
+            <Text style={ styles.primaryButtonText }>
+              { submitting ? `Submitting${submittingDots}` : mode === 'diy' ? 'Get DIY Result' : 'Continue' }
+            </Text>
+          </TouchableOpacity>
 
-        { result && (
-          <View style={ styles.resultCard }>
-            <Text style={ styles.resultTitle }>DIY Guidance</Text>
-            <Text style={ styles.resultText }>{ result.guide }</Text>
-            <TouchableOpacity style={ styles.secondaryButton } onPress={ handleSearch }>
-              <Text style={ styles.secondaryButtonText }>Search Google</Text>
-            </TouchableOpacity>
-          </View>
-        ) }
-      </View>
+          { result && (
+            <View style={ styles.resultCard }>
+              <Text style={ styles.resultTitle }>DIY Guidance</Text>
+              <Text style={ styles.resultText }>{ result.guide }</Text>
+              <TouchableOpacity style={ styles.secondaryButton } onPress={ handleSearch }>
+                <Text style={ styles.secondaryButtonText }>Search Google</Text>
+              </TouchableOpacity>
+            </View>
+          ) }
+        </ScrollView>
+      </KeyboardAvoidingView>
     </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
     gap: 12,
