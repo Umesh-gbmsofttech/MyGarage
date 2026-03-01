@@ -1,9 +1,10 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import Constants from 'expo-constants';
 import { useEffect, useMemo, useState } from 'react';
-import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppState, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import COLORS from '../theme/colors';
+import { BASE_URL } from '../api';
 
 const RELEASES_LATEST_URL = 'https://github.com/Umesh-gbmsofttech/MyGarage/releases/latest';
 const RELEASES_API_URL = 'https://api.github.com/repos/Umesh-gbmsofttech/MyGarage/releases/latest';
@@ -132,26 +133,45 @@ const UpdatePrompt = () => {
   );
 };
 
-import { BASE_URL } from '../api';
-
 const KeepAlive = () => {
   useEffect(() => {
+    let pingInterval = null;
+
     const pingServer = async () => {
       try {
         await fetch(BASE_URL);
-        console.log('Keep-alive ping sent to:', BASE_URL);
       } catch (error) {
         console.error('Keep-alive ping failed:', error);
       }
     };
 
-    // Ping immediately on mount
-    pingServer();
+    const startPinging = () => {
+      if (pingInterval) clearInterval(pingInterval);
+      pingServer();
+      pingInterval = setInterval(pingServer, 60000);
+    };
 
-    // Set interval for 14 minutes (14 * 60 * 1000 ms)
-    const intervalId = setInterval(pingServer, 14 * 60 * 1000);
+    const stopPinging = () => {
+      if (pingInterval) {
+        clearInterval(pingInterval);
+        pingInterval = null;
+      }
+    };
 
-    return () => clearInterval(intervalId);
+    startPinging();
+
+    const appStateListener = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        startPinging();
+      } else {
+        stopPinging();
+      }
+    });
+
+    return () => {
+      stopPinging();
+      appStateListener.remove();
+    };
   }, []);
 
   return null;

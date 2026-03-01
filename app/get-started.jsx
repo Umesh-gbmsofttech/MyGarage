@@ -9,7 +9,7 @@ const GetStartedScreen = () => {
   return (
     <AppShell hideChrome hideSupport>
       <View style={ styles.container }>
-        <TouchableOpacity style={ styles.skipButton } onPress={ () => router.replace('/') }>
+        <TouchableOpacity style={styles.skipButton} onPress={ () => router.replace('/') }>
           <Text style={ styles.skipText }>Skip</Text>
         </TouchableOpacity>
         <Text style={ styles.title }>Let&apos;s get you moving</Text>

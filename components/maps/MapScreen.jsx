@@ -534,62 +534,43 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
           </MapLibreGL.ShapeSource>
         )}
 
-        <MapLibreGL.Images
-          images={{
-            riderIcon: fullRiderUrl ? { uri: fullRiderUrl } : require('../../assets/images/profile.png'),
-            destinationIcon: fullDestinationUrl ? { uri: fullDestinationUrl } : require('../../assets/images/profile.png'),
-          }}
-        />
+        {riderCoord ? (
+          <MapLibreGL.PointAnnotation
+            id={`mechanic-point-${targetCameraRef === fullCameraRef ? 'full' : 'main'}`}
+            coordinate={riderCoord}
+          >
+            <View style={styles.markerWrap}>
+              <View style={styles.profileMarkerContainer}>
+                <Image
+                  source={fullRiderUrl ? { uri: fullRiderUrl } : require('../../assets/images/profile.png')}
+                  style={styles.profileImage}
+                />
+              </View>
+              <View style={styles.markerLabel}>
+                <Text style={styles.markerLabelText}>Mechanic</Text>
+              </View>
+            </View>
+          </MapLibreGL.PointAnnotation>
+        ) : null}
 
-      {riderCoord && (
-        <MapLibreGL.ShapeSource
-          id={`mechanicSource-${targetCameraRef === fullCameraRef ? 'full' : 'main'}`}
-          shape={{
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: riderCoord },
-          }}
-        >
-          <MapLibreGL.SymbolLayer
-            id={`mechanicLayer-${targetCameraRef === fullCameraRef ? 'full' : 'main'}`}
-            style={{
-              iconImage: 'riderIcon',
-              iconSize: 0.4,
-              iconAllowOverlap: true,
-              textField: 'Mechanic',
-              textColor: '#FFFFFF',
-              textSize: 10,
-              textOffset: [0, 2],
-              textHaloColor: 'rgba(15, 23, 42, 0.9)',
-              textHaloWidth: 2,
-            }}
-          />
-        </MapLibreGL.ShapeSource>
-      )}
-
-      {destinationCoordinate && (
-        <MapLibreGL.ShapeSource
-          id={`ownerSource-${targetCameraRef === fullCameraRef ? 'full' : 'main'}`}
-          shape={{
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: destinationCoordinate },
-          }}
-        >
-          <MapLibreGL.SymbolLayer
-            id={`ownerLayer-${targetCameraRef === fullCameraRef ? 'full' : 'main'}`}
-            style={{
-              iconImage: 'destinationIcon',
-              iconSize: 0.4,
-              iconAllowOverlap: true,
-              textField: 'Vehicle Owner',
-              textColor: '#FFFFFF',
-              textSize: 10,
-              textOffset: [0, 2],
-              textHaloColor: 'rgba(15, 23, 42, 0.9)',
-              textHaloWidth: 2,
-            }}
-          />
-        </MapLibreGL.ShapeSource>
-      )}
+        {destinationCoordinate ? (
+          <MapLibreGL.PointAnnotation
+            id={`owner-point-${targetCameraRef === fullCameraRef ? 'full' : 'main'}`}
+            coordinate={destinationCoordinate}
+          >
+            <View style={styles.markerWrap}>
+              <View style={styles.profileMarkerContainer}>
+                <Image
+                  source={fullDestinationUrl ? { uri: fullDestinationUrl } : require('../../assets/images/profile.png')}
+                  style={styles.profileImage}
+                />
+              </View>
+              <View style={styles.markerLabel}>
+                <Text style={styles.markerLabelText}>Vehicle Owner</Text>
+              </View>
+            </View>
+          </MapLibreGL.PointAnnotation>
+        ) : null}
     </MapLibreGL.MapView>
     );
   };

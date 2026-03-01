@@ -23,6 +23,18 @@ const api = {
     params.append('radiusKm', radiusKm);
     return apiClient.request({ path: `/api/mechanics/search?${params.toString()}` });
   },
+  searchMechanicsPaged: ({ query, lat, lng, radiusKm = 5, page = 0, size = 10 }) => {
+    const params = new URLSearchParams();
+    if (query) params.append('query', query);
+    if (lat !== undefined && lng !== undefined) {
+      params.append('lat', lat);
+      params.append('lng', lng);
+    }
+    params.append('radiusKm', radiusKm);
+    params.append('page', page);
+    params.append('size', size);
+    return apiClient.request({ path: `/api/mechanics/search/paged?${params.toString()}` });
+  },
 
   createBooking: (token, payload) =>
     apiClient.request({ path: '/api/bookings', method: 'POST', token, body: payload }),
@@ -34,10 +46,16 @@ const api = {
     apiClient.request({ path: `/api/bookings/${id}/verify-complete-otp`, method: 'POST', token, body: payload }),
   generateCompleteOtp: (token, id) =>
     apiClient.request({ path: `/api/bookings/${id}/generate-complete-otp`, method: 'POST', token }),
+  reportBooking: (token, id, payload) =>
+    apiClient.request({ path: `/api/bookings/${id}/report`, method: 'POST', token, body: payload }),
   bookingSummary: (token, id) =>
     apiClient.request({ path: `/api/bookings/${id}/summary`, token }),
-  ownerBookings: (token) => apiClient.request({ path: '/api/bookings/owner', token }),
-  mechanicBookings: (token) => apiClient.request({ path: '/api/bookings/mechanic', token }),
+  bookingById: (token, id) =>
+    apiClient.request({ path: `/api/bookings/${id}`, token }),
+  ownerBookings: (token, page = 0, size = 10) =>
+    apiClient.request({ path: `/api/bookings/owner?page=${page}&size=${size}`, token }),
+  mechanicBookings: (token, page = 0, size = 10) =>
+    apiClient.request({ path: `/api/bookings/mechanic?page=${page}&size=${size}`, token }),
 
   verifyOtp: (token, bookingId, payload) =>
     apiClient.request({ path: `/api/otp/bookings/${bookingId}/verify`, method: 'POST', token, body: payload }),
@@ -52,7 +70,11 @@ const api = {
     apiClient.request({ path: '/api/notifications/read-all', method: 'POST', token }),
 
   platformReviews: () => apiClient.request({ path: '/api/reviews/platform' }),
+  platformReviewsPaged: (page = 0, size = 10) =>
+    apiClient.request({ path: `/api/reviews/platform/paged?page=${page}&size=${size}` }),
   mechanicReviews: (mechanicId) => apiClient.request({ path: `/api/reviews/mechanics/${mechanicId}` }),
+  mechanicReviewsPaged: (mechanicId, page = 0, size = 10) =>
+    apiClient.request({ path: `/api/reviews/mechanics/${mechanicId}/paged?page=${page}&size=${size}` }),
   createReview: (token, payload) => apiClient.request({ path: '/api/reviews', method: 'POST', token, body: payload }),
 
   adminSettings: (token) => apiClient.request({ path: '/api/admin/settings', token }),

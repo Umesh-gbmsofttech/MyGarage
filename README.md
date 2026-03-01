@@ -30,3 +30,6 @@ Download the latest signed APK:
   <!-- <img src="./screenshots" width="250"/> -->
 </p>
 
+## Using Cron job website to keep alive render hosted server:
+
+1.  https://console.cron-job.org/jobs

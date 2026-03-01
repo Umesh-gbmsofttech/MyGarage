@@ -4,6 +4,11 @@
     "slug": "MyGarageApp",
     "version": "1.0.0",
     "orientation": "portrait",
+    "statusBar": {
+      "style": "light",
+      "backgroundColor": "#0F172A",
+      "translucent": true
+    },
     "icon": "./assets/images/MyGarage.jpg",
     "scheme": "mygarageapp",
     "userInterfaceStyle": "automatic",
@@ -16,7 +21,12 @@
         "foregroundImage": "./assets/images/MyGarage.jpg",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
+      "statusBar": {
+        "barStyle": "light-content",
+        "backgroundColor": "#0F172A",
+        "translucent": true
+      },
+      "edgeToEdgeEnabled": false,
       "permissions": [
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_EXTERNAL_STORAGE"

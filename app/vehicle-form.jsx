@@ -77,18 +77,36 @@ export default function VehicleForm() {
   return (
     <AppShell hideChrome hideSupport>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
+        behavior={ Platform.OS === 'ios' ? 'padding' : 'height' }
+        style={ { flex: 1 } }
       >
-        <ScrollView contentContainerStyle={ styles.container } bounces={false}>
+        <ScrollView contentContainerStyle={ styles.container } bounces={ false }>
           <Text style={ styles.heading }>Vehicle Information</Text>
-          <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Vehicle Type" style={ styles.input } value={ vehicleType } onChangeText={ setVehicleType } />
-          <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Model" style={ styles.input } value={ model } onChangeText={ setModel } />
-          <TextInput placeholderTextColor={ COLORS.placeholder } placeholder="Fuel Type" style={ styles.input } value={ fuelType } onChangeText={ setFuelType } />
+          <TextInput
+            placeholderTextColor={ COLORS.placeholder }
+            placeholder="Vehicle make (e.g., Honda, Hyundai, Tata)"
+            style={ styles.input }
+            value={ vehicleType }
+            onChangeText={ setVehicleType }
+          />
+          <TextInput
+            placeholderTextColor={ COLORS.placeholder }
+            placeholder="Vehicle model (e.g., City, i20, Nexon)"
+            style={ styles.input }
+            value={ model }
+            onChangeText={ setModel }
+          />
+          <TextInput
+            placeholderTextColor={ COLORS.placeholder }
+            placeholder="Vehicle year (e.g., 2019, 2022)"
+            style={ styles.input }
+            value={ fuelType }
+            onChangeText={ setFuelType }
+          />
           { mode !== 'diy' && (
             <TextInput
               placeholderTextColor={ COLORS.placeholder }
-              placeholder="Describe the issue"
+              placeholder="Issue description (what problem are you facing?)"
               style={ styles.input }
               value={ issue }
               onChangeText={ setIssue }

@@ -45,9 +45,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    paddingTop: 10,
+    paddingBottom: 6,
     backgroundColor: COLORS.card,
   },
   tab: {

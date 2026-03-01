@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import { FontAwesome } from '@expo/vector-icons';
 import api from '../../src/services/api';
 import API_BASE from '../../api';
 import COLORS from '../../theme/colors';
@@ -8,19 +8,25 @@ import COLORS from '../../theme/colors';
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.7;
 const SPACING = 16;
+const PAGE_SIZE = 6;
 
 const RatingReviewSection = () => {
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef(null);
   const [reviews, setReviews] = useState([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const [avatarLoadFailed, setAvatarLoadFailed] = useState({});
 
   useEffect(() => {
-    const load = async () => {
-      const data = await api.platformReviews();
-      setReviews(data);
+    const load = async (nextPage = 0, replace = true) => {
+      const data = await api.platformReviewsPaged(nextPage, PAGE_SIZE);
+      const rows = Array.isArray(data?.content) ? data.content : [];
+      setHasMore(!(data?.last ?? rows.length < PAGE_SIZE));
+      setPage(nextPage);
+      setReviews((prev) => (replace ? rows : [...prev, ...rows]));
     };
-    load();
+    load(0, true);
   }, []);
 
   useEffect(() => {
@@ -39,7 +45,7 @@ const RatingReviewSection = () => {
     const stars = [];
     for (let i = 1; i <= 5; i += 1) {
       stars.push(
-        <Icon
+        <FontAwesome
           key={i}
           name={i <= rating ? 'star' : 'star-o'}
           size={14}
@@ -93,6 +99,21 @@ const RatingReviewSection = () => {
           </View>
         ))}
       </ScrollView>
+      {hasMore ? (
+        <Text
+          style={styles.loadMoreText}
+          onPress={async () => {
+            const nextPage = page + 1;
+            const data = await api.platformReviewsPaged(nextPage, PAGE_SIZE);
+            const rows = Array.isArray(data?.content) ? data.content : [];
+            setHasMore(!(data?.last ?? rows.length < PAGE_SIZE));
+            setPage(nextPage);
+            setReviews((prev) => [...prev, ...rows]);
+          }}
+        >
+          Load more reviews
+        </Text>
+      ) : null}
     </View>
   );
 };
@@ -142,5 +163,11 @@ const styles = StyleSheet.create({
     height: 26,
     borderRadius: 13,
     marginRight: 8,
+  },
+  loadMoreText: {
+    marginTop: 8,
+    paddingHorizontal: 15,
+    color: COLORS.primary,
+    fontWeight: '700',
   },
 });

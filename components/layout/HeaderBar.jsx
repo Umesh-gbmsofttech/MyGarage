@@ -23,6 +23,8 @@ const HeaderBar = ({ onMenuPress, title = 'MyGarage' }) => {
     ? (profileImagePath.startsWith('http') ? profileImagePath : `${apiBase.replace('/api', '')}${profileImagePath}`)
     : '';
   const isAdmin = (profileRole || user?.role) === 'ADMIN';
+  const normalizedPath = (pathname || '').replace('/(tabs)', '') || '/';
+  const isRootTab = normalizedPath === '/' || normalizedPath === '/bookings' || normalizedPath === '/profile';
 
   useEffect(() => {
     let mounted = true;
@@ -141,8 +143,19 @@ const HeaderBar = ({ onMenuPress, title = 'MyGarage' }) => {
 
   return (
     <LinearGradient colors={[COLORS.accent, COLORS.background]} style={styles.container}>
-      <TouchableOpacity onPress={onMenuPress} style={styles.iconButton}>
-        <Ionicons name="menu" size={24} color={COLORS.primary} />
+      <TouchableOpacity
+        onPress={() => {
+          if (isRootTab) {
+            onMenuPress?.();
+          } else if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace('/');
+          }
+        }}
+        style={styles.iconButton}
+      >
+        <Ionicons name={isRootTab ? 'menu' : 'arrow-back'} size={22} color={COLORS.primary} />
       </TouchableOpacity>
       <View style={styles.titleWrap}>
         <Text style={styles.title}>{title}</Text>
@@ -186,7 +199,7 @@ const HeaderBar = ({ onMenuPress, title = 'MyGarage' }) => {
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 40,
+    paddingTop: 10,
     paddingBottom: 14,
     paddingHorizontal: 16,
     flexDirection: 'row',

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import * as SecureStore from 'expo-secure-store';
 import AppShell from '../components/layout/AppShell';
 import MapScreen from '../components/maps/MapScreen';
 import { useAuth } from '../src/context/AuthContext';
@@ -21,6 +23,7 @@ const BookingScreen = () => {
   const [ localDeviceLocation, setLocalDeviceLocation ] = useState(null);
   const [ prompted, setPrompted ] = useState(false);
   const [ actionLoading, setActionLoading ] = useState('');
+  const feedbackPromptKey = useMemo(() => `feedback_prompt_done_${bookingId}`, [bookingId]);
   const isMechanic = useMemo(() => user?.role === 'MECHANIC', [ user ]);
   const loadingDots = useLoadingDots(Boolean(actionLoading));
 
@@ -30,10 +33,10 @@ const BookingScreen = () => {
       setLoading(true);
     }
     try {
-      const list = user.role === 'MECHANIC' ? await api.mechanicBookings(token) : await api.ownerBookings(token);
-      const item = list.find((b) => String(b.id) === String(bookingId));
-      setBooking(item);
+      const item = await api.bookingById(token, bookingId);
+      setBooking(item || null);
     } catch (err) {
+      setBooking(null);
       Alert.alert('Error', err.message || 'Failed to load booking');
     } finally {
       if (showLoading) {
@@ -130,14 +133,22 @@ const BookingScreen = () => {
   }, [booking, localDeviceLocation]);
 
   useEffect(() => {
-    if (booking?.status === 'COMPLETED' && booking?.completeVerified && !prompted) {
+    const maybePromptFeedback = async () => {
+      if (booking?.status !== 'COMPLETED' || !booking?.completeVerified || prompted) return;
+      const alreadyShown = await SecureStore.getItemAsync(feedbackPromptKey);
+      if (alreadyShown === '1') {
+        setPrompted(true);
+        return;
+      }
       setPrompted(true);
+      await SecureStore.setItemAsync(feedbackPromptKey, '1');
       Alert.alert('Service Completed', 'Please share feedback.', [
         { text: 'Skip' },
         { text: 'Give Feedback', onPress: () => router.push('/feedback') },
       ]);
-    }
-  }, [ booking, prompted ]);
+    };
+    maybePromptFeedback();
+  }, [ booking, prompted, feedbackPromptKey, router ]);
 
   const handleVerifyMeet = async () => {
     if (actionLoading) return;
@@ -209,6 +220,10 @@ const BookingScreen = () => {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.container}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={18} color={COLORS.primary} />
+            <Text style={styles.backButtonText}>Back</Text>
+          </TouchableOpacity>
           { loading && (
             <View style={ styles.card }>
               <Skeleton height={ 18 } width="40%" />
@@ -219,7 +234,9 @@ const BookingScreen = () => {
             <View style={ styles.card }>
               <Text style={ styles.title }>Booking #{ booking.id }</Text>
               <Text style={ styles.text }>Status: { booking.status }</Text>
-              <Text style={ styles.text }>Vehicle: { booking.vehicleMake } { booking.vehicleModel }</Text>
+              <Text style={ styles.text }>Make: { booking.vehicleMake || '-' }</Text>
+              <Text style={ styles.text }>Model: { booking.vehicleModel || '-' }</Text>
+              <Text style={ styles.text }>Year: { booking.vehicleYear || '-' }</Text>
               <Text style={ styles.text }>Issue: { booking.issueDescription }</Text>
             </View>
           ) }
@@ -305,6 +322,22 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 16,
     paddingTop: 50,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: COLORS.card,
+    borderColor: COLORS.border,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  backButtonText: {
+    color: COLORS.primary,
+    fontWeight: '700',
   },
   card: {
     backgroundColor: COLORS.card,

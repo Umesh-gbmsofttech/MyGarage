@@ -27,8 +27,6 @@ const ProfileScreen = () => {
   const [ bannerError, setBannerError ] = useState('');
   const [ mechanicId, setMechanicId ] = useState('');
   const [ mechanicVisible, setMechanicVisible ] = useState(true);
-  const [ platformReviews, setPlatformReviews ] = useState([]);
-  const [ mechanicReviews, setMechanicReviews ] = useState([]);
   const [ signoutConfirmVisible, setSignoutConfirmVisible ] = useState(false);
   const [ profilePreviewVisible, setProfilePreviewVisible ] = useState(false);
   const [ saveLoading, setSaveLoading ] = useState(false);
@@ -103,14 +101,6 @@ const ProfileScreen = () => {
         setAdminSettings(settings);
         const bannersData = await api.adminBanners(token);
         setBanners(bannersData);
-      }
-      const platform = await api.platformReviews();
-      setPlatformReviews(Array.isArray(platform) ? platform : []);
-      if (data.role === 'MECHANIC' && data.userId) {
-        const mechReviews = await api.mechanicReviews(data.userId);
-        setMechanicReviews(Array.isArray(mechReviews) ? mechReviews : []);
-      } else {
-        setMechanicReviews([]);
       }
     } catch (err) {
       setError(err.message || 'Failed to load profile');
@@ -502,28 +492,6 @@ const ProfileScreen = () => {
             </View>
           </>
         ) }
-
-        <View style={ styles.card }>
-          <Text style={ styles.sectionTitle }>Reviews</Text>
-          <Text style={ styles.subTitle }>Platform reviews</Text>
-          { platformReviews.map((review) => (
-            <View key={ review.id } style={ styles.reviewRow }>
-              <Text style={ styles.reviewText }>{ review.comment || 'No comment' }</Text>
-              <Text style={ styles.reviewMeta }>{ review.rating } ★</Text>
-            </View>
-          )) }
-          { profile?.role === 'MECHANIC' && (
-            <>
-              <Text style={ styles.subTitle }>Mechanic reviews</Text>
-              { mechanicReviews.map((review) => (
-                <View key={ review.id } style={ styles.reviewRow }>
-                  <Text style={ styles.reviewText }>{ review.comment || 'No comment' }</Text>
-                  <Text style={ styles.reviewMeta }>{ review.rating } ★</Text>
-                </View>
-              )) }
-            </>
-          ) }
-        </View>
       </ScrollView>
       <Modal visible={ isEditing } transparent animationType="slide">
         <View style={ styles.modalBackdrop }>
@@ -947,5 +915,6 @@ const styles = StyleSheet.create({
 });
 
 export default ProfileScreen;
+
 
 
