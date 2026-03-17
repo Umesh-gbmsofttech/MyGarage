@@ -14,10 +14,34 @@ const FAQS = [
       'Open Book Now, choose a mechanic, add vehicle details and issue, then submit. You can track status in My Bookings.',
   },
   {
+    id: 'signup',
+    question: 'How do I sign up?',
+    answer:
+      'Go to Sign Up, pick Vehicle Owner or Mechanic, fill the required details, and tap Create Account.',
+  },
+  {
+    id: 'login',
+    question: 'I cannot log in. What should I check?',
+    answer:
+      'Verify your email and password, check your internet connection, and try again. You can also reset by creating a new account if needed.',
+  },
+  {
     id: 'profile',
     question: 'How do I update my profile?',
     answer:
       'Go to Profile tab, tap Edit Profile, update your details, and Save. You can also change your profile image there.',
+  },
+  {
+    id: 'rating',
+    question: 'How do I rate a mechanic?',
+    answer:
+      'After a booking is completed, open the booking details and submit a rating and review.',
+  },
+  {
+    id: 'feedback',
+    question: 'How do I submit feedback?',
+    answer:
+      'Open the Feedback screen from the menu and share your rating and comments about the app.',
   },
   {
     id: 'payment',
@@ -31,6 +55,12 @@ const FAQS = [
     answer:
       'Yes. Once a booking is accepted, Live Tracking appears on the booking details screen.',
   },
+  {
+    id: 'diy',
+    question: 'Where can I find DIY tips?',
+    answer:
+      'Open the DIY section from Home to browse maintenance guides and quick fixes.',
+  },
 ];
 
 const SupportChatScreen = () => {
@@ -42,6 +72,10 @@ const SupportChatScreen = () => {
 
   const username = useMemo(() => {
     return user?.firstName || user?.name || 'there';
+  }, [user]);
+
+  const userRole = useMemo(() => {
+    return user?.role || '';
   }, [user]);
 
   useEffect(() => {
@@ -57,7 +91,7 @@ const SupportChatScreen = () => {
 
     try {
       setSending(true);
-      const data = await api.chat(text);
+      const data = await api.chat({ message: text, userName: username, userRole });
       const reply = data?.reply || 'Thanks! How else can I help?';
       setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, from: 'bot', text: reply }]);
     } catch (error) {
@@ -109,7 +143,7 @@ const SupportChatScreen = () => {
 
         <View style={styles.inputRow}>
           <TextInput
-            placeholder="Ask about bookings, profile updates..."
+            placeholder="Ask about login, signup, bookings, ratings, DIY..."
             placeholderTextColor={COLORS.placeholder}
             value={input}
             onChangeText={setInput}

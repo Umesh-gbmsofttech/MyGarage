@@ -87,8 +87,8 @@ const api = {
   updateMechanicVisibility: (token, id, visible) =>
     apiClient.request({ path: `/api/admin/mechanics/${id}/visibility/${visible}`, method: 'PUT', token }),
 
-  chat: (message) =>
-    apiClient.request({ path: '/api/chat', method: 'POST', body: { message } }),
+  chat: ({ message, userName, userRole }) =>
+    apiClient.request({ path: '/api/chat', method: 'POST', body: { message, userName, userRole } }),
   mapsConfig: () =>
     apiClient.request({ path: '/api/maps/config' }),
   mapsDirections: (payload) =>
