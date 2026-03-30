@@ -5,7 +5,7 @@ const EngineCooling = () => {
         <View style={ styles.container }>
             <Text style={ styles.title }>Engine Cooling Care</Text>
             <Text style={ styles.description }>
-                Ensure your vehicle's engine cooling system is in optimal condition by checking coolant levels, radiator, and fan.
+                Ensure your vehicle&apos;s engine cooling system is in optimal condition by checking coolant levels, radiator, and fan.
             </Text>
         </View>
     );

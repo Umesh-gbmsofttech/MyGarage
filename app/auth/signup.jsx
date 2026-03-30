@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Alert, Image, Linking, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Alert, Image, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import AppShell from '../../components/layout/AppShell';
+import KeyboardScreen from '../../components/utility/KeyboardScreen';
 import { useAuth } from '../../src/context/AuthContext';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
@@ -14,6 +16,7 @@ const SignUpScreen = () => {
   const [ role, setRole ] = useState('VEHICLE_OWNER');
   const [ showPassword, setShowPassword ] = useState(false);
   const [ profileImage, setProfileImage ] = useState(null);
+  const [certificateFile, setCertificateFile] = useState(null);
   const [ submitting, setSubmitting ] = useState(false);
   const [ form, setForm ] = useState({
     name: '',
@@ -23,12 +26,18 @@ const SignUpScreen = () => {
     password: '',
     experience: '',
     speciality: '',
+    certificate: '',
     city: '',
-    shopActive: true,
   });
 
   const update = (key, value) => setForm((prev) => ({ ...prev, [ key ]: value }));
   const submittingDots = useLoadingDots(submitting);
+  const certificatePreview = useMemo(() => {
+    if (!certificateFile) return null;
+    const lowerName = certificateFile.name?.toLowerCase() || '';
+    const isPdf = certificateFile.mimeType === 'application/pdf' || lowerName.endsWith('.pdf');
+    return { isPdf, uri: certificateFile.uri, name: certificateFile.name || 'Selected document' };
+  }, [certificateFile]);
 
   const ensureMediaPermission = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -83,8 +92,12 @@ const SignUpScreen = () => {
           await api.uploadProfileImage(response.token, formData);
         }
       } else {
-        if (!form.name || !form.surname || !form.mobile || !form.email || !form.experience || !form.speciality || !form.city || !form.shopActive) {
+        if (!form.name || !form.surname || !form.mobile || !form.email || !form.experience || !form.speciality || !form.city || !form.certificate) {
           Alert.alert('Error', 'Please fill all fields.');
+          return;
+        }
+        if (!certificateFile) {
+          Alert.alert('Error', 'Please select your certification document.');
           return;
         }
         const payload = {
@@ -96,11 +109,20 @@ const SignUpScreen = () => {
           experience: form.experience,
           speciality: form.speciality,
           city: form.city,
-          shopAct: form.shopActive,
+          certificate: form.certificate,
           role: 'MECHANIC',
         };
         console.log('Signup payload:', payload);
         const response = await signupMechanic(payload);
+        if (certificateFile) {
+          const documentData = new FormData();
+          documentData.append('file', {
+            uri: certificateFile.uri,
+            name: certificateFile.name || 'certificate',
+            type: certificateFile.mimeType || 'application/octet-stream',
+          });
+          await api.uploadProfileDocument(response.token, documentData, 'CERTIFICATION');
+        }
         if (profileImage) {
           const formData = new FormData();
           formData.append('file', {
@@ -117,6 +139,18 @@ const SignUpScreen = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handlePickCertificate = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['image/png', 'image/jpg', 'image/jpeg', 'application/pdf'],
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+    if (result.canceled) return;
+    const file = result.assets?.[0];
+    if (!file) return;
+    setCertificateFile(file);
   };
 
   const handlePickImage = async () => {
@@ -155,12 +189,14 @@ const SignUpScreen = () => {
 
   return (
     <AppShell hideChrome hideSupport>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <ScrollView contentContainerStyle={ styles.container } bounces={false}>
-          <Text style={ styles.title }>Create Account</Text>
+      <KeyboardScreen contentContainerStyle={ styles.container }>
+          <View style={styles.heroCard}>
+            <Text style={styles.heroEyebrow}>MyGarage</Text>
+            <Text style={ styles.title }>Create Your Account</Text>
+            <Text style={styles.heroText}>
+              Start booking help faster with a cleaner signup flow for vehicle owners and mechanics.
+            </Text>
+          </View>
           <View style={ styles.roleSwitch }>
             <TouchableOpacity
               style={ [ styles.roleButton, role === 'VEHICLE_OWNER' && styles.roleButtonActive ] }
@@ -206,13 +242,30 @@ const SignUpScreen = () => {
 
           { role === 'MECHANIC' && (
             <>
+              <View style={styles.noticeCard}>
+                <Text style={styles.noticeTitle}>Mechanic approval required</Text>
+                <Text style={styles.noticeText}>
+                  Self-registered mechanics stay hidden from the public list until Super Admin approval.
+                </Text>
+              </View>
               <TextInput placeholderTextColor={ colors.placeholder } placeholder="Experience" value={ form.experience } onChangeText={ (v) => update('experience', v) } style={ styles.input } />
               <TextInput placeholderTextColor={ colors.placeholder } placeholder="Speciality" value={ form.speciality } onChangeText={ (v) => update('speciality', v) } style={ styles.input } />
+              <TextInput placeholderTextColor={ colors.placeholder } placeholder="Certificate title (ITI, Engineering, Automobile...)" value={ form.certificate } onChangeText={ (v) => update('certificate', v) } style={ styles.input } />
+              <TouchableOpacity style={styles.uploadButton} onPress={handlePickCertificate}>
+                <Text style={styles.uploadButtonText}>{certificateFile ? 'Change certification file' : 'Select certification file'}</Text>
+              </TouchableOpacity>
+              <Text style={styles.fileHint}>Accepted file types: png, jpg, jpeg, pdf</Text>
+              {certificatePreview ? (
+                certificatePreview.isPdf ? (
+                  <View style={styles.filePreviewCard}>
+                    <Text style={styles.filePreviewTitle}>PDF selected</Text>
+                    <Text style={styles.filePreviewText}>{certificatePreview.name}</Text>
+                  </View>
+                ) : (
+                  <Image source={{ uri: certificatePreview.uri }} style={styles.documentPreview} />
+                )
+              ) : null}
               <TextInput placeholderTextColor={ colors.placeholder } placeholder="City" value={ form.city } onChangeText={ (v) => update('city', v) } style={ styles.input } />
-              <View style={ styles.switchRow }>
-                <Text style={ styles.switchLabel }>Shop active</Text>
-                <Switch value={ form.shopActive } onValueChange={ (v) => update('shopActive', v) } />
-              </View>
             </>
           ) }
 
@@ -222,8 +275,7 @@ const SignUpScreen = () => {
           <TouchableOpacity onPress={ () => router.push('/auth/signin') } disabled={ submitting }>
             <Text style={ styles.link }>Already have an account? Sign in</Text>
           </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardScreen>
     </AppShell>
   );
 };
@@ -233,16 +285,30 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
-    gap: 12,
+    gap: 14,
+  },
+  heroCard: {
+    borderRadius: 20,
+    padding: 18,
+    gap: 6,
+    backgroundColor: '#F5F9FF',
+    borderWidth: 1,
+    borderColor: '#CFE0F6',
+  },
+  heroEyebrow: {
+    color: colors.primary,
+    fontWeight: '800',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.primary,
-    alignSelf: 'center',
-    borderBottomWidth: 3,
-    borderColor: colors.primarySoft,
-
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  heroText: {
+    color: colors.muted,
+    lineHeight: 20,
   },
   roleSwitch: {
     flexDirection: 'row',
@@ -250,11 +316,12 @@ const styles = StyleSheet.create({
   },
   roleButton: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingVertical: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.primary,
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
   roleButtonActive: {
     backgroundColor: colors.primary,
@@ -271,9 +338,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 12,
     backgroundColor: colors.card,
-    color: colors.text
+    color: colors.text,
+    fontSize: 14,
   },
   passwordRow: {
     flexDirection: 'row',
@@ -295,21 +363,74 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '700',
   },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  noticeCard: {
+    backgroundColor: '#FFF7ED',
+    borderColor: '#FDBA74',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    gap: 4,
+  },
+  noticeTitle: {
+    fontWeight: '700',
+    color: colors.text,
+  },
+  noticeText: {
+    color: colors.muted,
+    fontSize: 12,
   },
   switchLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.text,
   },
+  fileHint: {
+    color: colors.muted,
+    fontSize: 12,
+    marginTop: -4,
+  },
+  documentPreview: {
+    width: '100%',
+    height: 160,
+    borderRadius: 14,
+  },
+  filePreviewCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    padding: 12,
+    gap: 4,
+  },
+  filePreviewTitle: {
+    fontWeight: '700',
+    color: colors.text,
+  },
+  filePreviewText: {
+    color: colors.muted,
+  },
+  uploadButton: {
+    borderColor: '#C7D8EE',
+    borderWidth: 1,
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+    backgroundColor: '#F7FAFD',
+  },
+  uploadButtonText: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
   primaryButton: {
     backgroundColor: colors.primary,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   primaryButtonDisabled: {
     opacity: 0.8,

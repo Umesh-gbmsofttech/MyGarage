@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity } from 'react-native';
 import AppShell from '../components/layout/AppShell';
+import KeyboardScreen from '../components/utility/KeyboardScreen';
 import { useAuth } from '../src/context/AuthContext';
 import api from '../src/services/api';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -41,7 +42,7 @@ const RatingScreen = () => {
 
   return (
     <AppShell hideChrome>
-      <View style={styles.container}>
+      <KeyboardScreen contentContainerStyle={styles.container}>
         <Text style={styles.title}>{mechanicId ? 'Rate the mechanic' : 'Rate the platform'}</Text>
         <TextInput value={rating} onChangeText={setRating} style={styles.input} keyboardType="numeric" />
         <TextInput
@@ -55,7 +56,7 @@ const RatingScreen = () => {
         <TouchableOpacity style={[styles.primaryButton, submitting && styles.primaryButtonDisabled]} onPress={handleSubmit} disabled={submitting}>
           <Text style={styles.primaryButtonText}>{submitting ? `Submitting${submittingDots}` : 'Submit Review'}</Text>
         </TouchableOpacity>
-      </View>
+      </KeyboardScreen>
     </AppShell>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import AppShell from '../../components/layout/AppShell';
+import KeyboardScreen from '../../components/utility/KeyboardScreen';
 import { useAuth } from '../../src/context/AuthContext';
 import { useRouter } from 'expo-router';
 import COLORS from '../../theme/colors';
@@ -34,46 +35,44 @@ const SignInScreen = () => {
 
   return (
     <AppShell hideChrome hideSupport>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <ScrollView contentContainerStyle={ styles.container } bounces={false}>
-          <Text style={ styles.title }>Sign In</Text>
+      <KeyboardScreen contentContainerStyle={styles.container}>
+        <Text style={ styles.title }>Sign In</Text>
+        <TextInput
+          placeholderTextColor={ COLORS.placeholder }
+          placeholder="Email"
+          value={ email }
+          onChangeText={ setEmail }
+          style={ styles.input }
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+        <View style={ styles.passwordRow }>
           <TextInput
-            placeholderTextColor={ COLORS.placeholder }
-            placeholder="Email"
-            value={ email }
-            onChangeText={ setEmail }
-            style={ styles.input }
-            keyboardType="email-address"
-            autoCapitalize="none"
+            placeholderTextColor={ '#0B2239' }
+            placeholder="Password"
+            value={ password }
+            onChangeText={ setPassword }
+            style={ [ styles.input, styles.passwordInput ] }
+            secureTextEntry={ !showPassword }
           />
-          <View style={ styles.passwordRow }>
-            <TextInput
-              placeholderTextColor={ '#0B2239' }
-              placeholder="Password"
-              value={ password }
-              onChangeText={ setPassword }
-              style={ [ styles.input, styles.passwordInput ] }
-              secureTextEntry={ !showPassword }
-            />
-            <TouchableOpacity style={ styles.eyeButton } onPress={ () => setShowPassword((prev) => !prev) }>
-              <Text style={ styles.eyeText }>{ showPassword ? 'Hide' : 'Show' }</Text>
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity
-            style={ [ styles.primaryButton, loading && styles.primaryButtonDisabled ] }
-            onPress={ handleSignin }
-            disabled={ loading }
-          >
-            <Text style={ styles.primaryButtonText }>{ loading ? `Loading${loadingDots}` : 'Sign In' }</Text>
+          <TouchableOpacity style={ styles.eyeButton } onPress={ () => setShowPassword((prev) => !prev) }>
+            <Text style={ styles.eyeText }>{ showPassword ? 'Hide' : 'Show' }</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={ () => router.push('/auth/signup') }>
-            <Text style={ styles.link }>Create a new account</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
+        <TouchableOpacity
+          style={ [ styles.primaryButton, loading && styles.primaryButtonDisabled ] }
+          onPress={ handleSignin }
+          disabled={ loading }
+        >
+          <Text style={ styles.primaryButtonText }>{ loading ? `Loading${loadingDots}` : 'Sign In' }</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push('/auth/forgot-password')}>
+          <Text style={styles.helperLink}>Forgot password?</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={ () => router.push('/auth/signup') }>
+          <Text style={ styles.link }>Create a new account</Text>
+        </TouchableOpacity>
+      </KeyboardScreen>
     </AppShell>
   );
 };
@@ -136,6 +135,11 @@ const styles = StyleSheet.create({
   },
   link: {
     color: COLORS.primary,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  helperLink: {
+    color: COLORS.muted,
     fontWeight: '600',
     textAlign: 'center',
   },

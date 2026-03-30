@@ -1,21 +1,9 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
-import Constants from 'expo-constants';
-import { useEffect, useMemo, useState } from 'react';
-import { AppState, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { AppState, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import COLORS from '../theme/colors';
 import { BASE_URL } from '../api';
-
-const RELEASES_LATEST_URL = 'https://github.com/Umesh-gbmsofttech/MyGarage/releases/latest';
-const RELEASES_API_URL = 'https://api.github.com/repos/Umesh-gbmsofttech/MyGarage/releases/latest';
-
-const extractRunNumber = (value) => {
-  if (!value) return null;
-  const match = String(value).trim().replace(/^v/i, '').match(/(\d+)/);
-  if (!match) return null;
-  const parsed = parseInt(match[1], 10);
-  return Number.isNaN(parsed) ? null : parsed;
-};
 
 const AuthGate = ({ children }) => {
   const { token, ready, signout, sessionExpiredVisible, setSessionExpiredVisible } = useAuth();
@@ -69,70 +57,6 @@ const AuthGate = ({ children }) => {
   );
 };
 
-const UpdatePrompt = () => {
-  const [visible, setVisible] = useState(false);
-  const [latestTag, setLatestTag] = useState('');
-  const currentRunNumber = useMemo(() => {
-    const value =
-      Constants.expoConfig?.extra?.buildNumber ||
-      Constants.manifest?.extra?.buildNumber ||
-      Constants.manifest2?.extra?.expoClient?.buildNumber;
-    return extractRunNumber(value);
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    const checkLatest = async () => {
-      try {
-        const response = await fetch(RELEASES_API_URL, {
-          headers: { Accept: 'application/vnd.github+json' },
-        });
-        if (!response.ok) return;
-        const data = await response.json();
-        const latest = extractRunNumber(data?.tag_name);
-        if (!latest || !mounted || !currentRunNumber) return;
-        if (latest === currentRunNumber) return;
-        if (latest > currentRunNumber) {
-          setLatestTag(`v${latest}`);
-          setVisible(true);
-        }
-      } catch (error) {
-        // fail silently
-      }
-    };
-    checkLatest();
-    return () => {
-      mounted = false;
-    };
-  }, [currentRunNumber]);
-
-  const handleDownload = () => {
-    setVisible(false);
-    Linking.openURL(RELEASES_LATEST_URL);
-  };
-
-  return (
-    <Modal transparent visible={visible} animationType="fade" onRequestClose={() => setVisible(false)}>
-      <View style={styles.updateBackdrop}>
-        <View style={styles.updateCard}>
-          <Text style={styles.updateTitle}>New version available</Text>
-          <Text style={styles.updateSubtitle}>
-            A new version ({latestTag}) is available. Download the latest release.
-          </Text>
-          <View style={styles.updateActions}>
-            <Pressable onPress={() => setVisible(false)} style={[styles.updateButton, styles.cancelButton]}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </Pressable>
-            <Pressable onPress={handleDownload} style={[styles.updateButton, styles.downloadButton]}>
-              <Text style={styles.downloadText}>Download</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-};
-
 const KeepAlive = () => {
   useEffect(() => {
     let pingInterval = null;
@@ -182,13 +106,14 @@ export default function RootLayout() {
     <AuthProvider>
       <AuthGate>
         <KeepAlive />
-        <UpdatePrompt />
         <Stack screenOptions={{ headerShown: false }} initialRouteName="welcome">
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="welcome" />
           <Stack.Screen name="get-started" />
           <Stack.Screen name="auth/signin" />
+          <Stack.Screen name="auth/forgot-password" />
           <Stack.Screen name="auth/signup" />
+          <Stack.Screen name="garage-owner/register" />
           <Stack.Screen name="vehicle-form" />
           <Stack.Screen name="booking" />
           <Stack.Screen name="search" />

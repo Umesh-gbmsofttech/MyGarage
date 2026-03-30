@@ -29,6 +29,11 @@ const MechanicCard = ({ mechanic }) => {
 
   return (
     <View style={styles.card}>
+      <View style={[styles.statusBadge, mechanic.available ? styles.statusAvailable : styles.statusBusy]}>
+        <Text style={[styles.statusBadgeText, mechanic.available ? styles.statusAvailableText : styles.statusBusyText]}>
+          {mechanic.available ? 'Available' : 'Working'}
+        </Text>
+      </View>
       {profileImageUri && !imageError ? (
         <Image
           source={{ uri: profileImageUri }}
@@ -60,6 +65,30 @@ const styles = StyleSheet.create({
     marginRight: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
+    gap: 2,
+  },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 6,
+  },
+  statusAvailable: {
+    backgroundColor: '#ECFDF3',
+  },
+  statusBusy: {
+    backgroundColor: '#FFF7ED',
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  statusAvailableText: {
+    color: '#047857',
+  },
+  statusBusyText: {
+    color: '#C2410C',
   },
   avatar: {
     width: 64,

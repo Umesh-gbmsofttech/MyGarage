@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity } from 'react-native';
 import AppShell from '../components/layout/AppShell';
+import KeyboardScreen from '../components/utility/KeyboardScreen';
 import { useAuth } from '../src/context/AuthContext';
 import api from '../src/services/api';
 import COLORS from '../theme/colors';
@@ -34,7 +35,7 @@ const FeedbackScreen = () => {
 
   return (
     <AppShell title="Feedback">
-      <View style={styles.container}>
+      <KeyboardScreen contentContainerStyle={styles.container}>
         <Text style={styles.title}>Rate the platform</Text>
         <TextInput value={rating} onChangeText={setRating} style={styles.input} keyboardType="numeric" />
         <TextInput
@@ -49,7 +50,7 @@ const FeedbackScreen = () => {
           <Text style={styles.primaryButtonText}>{submitting ? `Submitting${submittingDots}` : 'Submit'}</Text>
         </TouchableOpacity>
         {message ? <Text style={styles.message}>{message}</Text> : null}
-      </View>
+      </KeyboardScreen>
     </AppShell>
   );
 };

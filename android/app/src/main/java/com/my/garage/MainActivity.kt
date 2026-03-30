@@ -1,4 +1,4 @@
-package com.mygarage.app
+package com.my.garage
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

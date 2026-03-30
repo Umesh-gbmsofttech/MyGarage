@@ -35,6 +35,23 @@ const ProfileScreen = () => {
   const [ visibilityLoading, setVisibilityLoading ] = useState(false);
   const [ profileImageUploading, setProfileImageUploading ] = useState(false);
   const [ selectedProfileImage, setSelectedProfileImage ] = useState(null);
+  const [ pendingApprovals, setPendingApprovals ] = useState([]);
+  const [ workerModalVisible, setWorkerModalVisible ] = useState(false);
+  const [ workerSaving, setWorkerSaving ] = useState(false);
+  const [ editingWorkerId, setEditingWorkerId ] = useState(null);
+  const [ workerForm, setWorkerForm ] = useState({
+    firstName: '',
+    surname: '',
+    mobile: '',
+    email: '',
+    password: '',
+    experience: '',
+    speciality: '',
+    expertise: '',
+    city: '',
+    about: '',
+  });
+  const [ availabilityLoading, setAvailabilityLoading ] = useState(false);
   const saveDots = useLoadingDots(saveLoading);
   const settingsDots = useLoadingDots(settingsLoading);
   const deleteDots = useLoadingDots(Boolean(deleteBannerId));
@@ -89,7 +106,7 @@ const ProfileScreen = () => {
         city: data.city || '',
         experience: data.experience || '',
         speciality: data.speciality || '',
-        shopActive: data.shopActive ?? true,
+        available: data.available ?? true,
         profileImageUrl: data.profileImageUrl || '',
         expertise: data.expertise || '',
         about: data.about || '',
@@ -101,6 +118,8 @@ const ProfileScreen = () => {
         setAdminSettings(settings);
         const bannersData = await api.adminBanners(token);
         setBanners(bannersData);
+        const approvals = await api.pendingMechanicApprovals(token).catch(() => []);
+        setPendingApprovals(Array.isArray(approvals) ? approvals : []);
       }
     } catch (err) {
       setError(err.message || 'Failed to load profile');
@@ -242,6 +261,64 @@ const ProfileScreen = () => {
     }
   };
 
+  const resetWorkerForm = () => {
+    setEditingWorkerId(null);
+    setWorkerForm({
+      firstName: '',
+      surname: '',
+      mobile: '',
+      email: '',
+      password: '',
+      experience: '',
+      speciality: '',
+      expertise: '',
+      city: '',
+      about: '',
+    });
+  };
+
+  const saveWorker = async () => {
+    try {
+      setWorkerSaving(true);
+      if (editingWorkerId) {
+        await api.updateGarageMechanic(token, editingWorkerId, workerForm);
+      } else {
+        await api.addGarageMechanic(token, workerForm);
+      }
+      setWorkerModalVisible(false);
+      resetWorkerForm();
+      await loadProfile();
+    } catch (err) {
+      setError(err.message || 'Failed to save worker');
+    } finally {
+      setWorkerSaving(false);
+    }
+  };
+
+  const handleApproval = async (id, status) => {
+    try {
+      await api.updateMechanicApproval(token, id, { status });
+      const approvals = await api.pendingMechanicApprovals(token).catch(() => []);
+      setPendingApprovals(Array.isArray(approvals) ? approvals : []);
+    } catch (err) {
+      setError(err.message || 'Failed to update approval');
+    }
+  };
+
+  const handleAvailabilityChange = async (available) => {
+    if (!token || availabilityLoading) return;
+    try {
+      setAvailabilityLoading(true);
+      const updated = await api.updateAvailability(token, { available });
+      setProfile(updated);
+      setEdit((prev) => ({ ...prev, available: updated.available ?? available }));
+    } catch (err) {
+      setError(err.message || 'Failed to update working status');
+    } finally {
+      setAvailabilityLoading(false);
+    }
+  };
+
   const isAdmin = profile?.role === 'ADMIN';
   const hasUploadedProfileImage = Boolean(profile?.profileImageUrl || profile?.avatarUrl);
   const effectiveProfileSource = isAdmin
@@ -366,7 +443,7 @@ const ProfileScreen = () => {
               <Text style={ styles.profileValue }>{ edit.mobile || '-' }</Text>
             </View>
 
-            { profile.role === 'MECHANIC' && (
+            {(profile.role === 'MECHANIC' || profile.role === 'GARAGE_OWNER') && (
               <>
                 <View style={ styles.profileRow }>
                   <Text style={ styles.profileLabel }>Experience</Text>
@@ -389,9 +466,19 @@ const ProfileScreen = () => {
                   <Text style={ styles.profileValue }>{ edit.about || '-' }</Text>
                 </View>
                 <View style={ styles.profileRow }>
-                  <Text style={ styles.profileLabel }>Shop active</Text>
-                  <Text style={ styles.profileValue }>{ edit.shopActive ? 'Yes' : 'No' }</Text>
+                  <Text style={ styles.profileLabel }>Work status</Text>
+                  <Text style={ styles.profileValue }>{ edit.available ? 'Available for bookings' : 'Busy on service' }</Text>
                 </View>
+                <View style={ styles.profileRow }>
+                  <Text style={ styles.profileLabel }>Approval</Text>
+                  <Text style={ styles.profileValue }>{ profile.approvalStatus || '-' }</Text>
+                </View>
+                { profile.registrationSource === 'GARAGE_OWNER' ? (
+                  <View style={ styles.profileRow }>
+                    <Text style={ styles.profileLabel }>Team role</Text>
+                    <Text style={ styles.profileValue }>Garage mechanic</Text>
+                  </View>
+                ) : null }
               </>
             ) }
 
@@ -413,11 +500,92 @@ const ProfileScreen = () => {
                 <Text style={ styles.primaryButtonText }>Edit Profile</Text>
               </TouchableOpacity>
             ) }
+            {(profile.role === 'MECHANIC' || profile.role === 'GARAGE_OWNER') && !profile.garageOwnerUserId ? (
+              <View style={styles.statusCard}>
+                <Text style={styles.subTitle}>Availability</Text>
+                <Text style={styles.reviewText}>Only providers marked available appear in the public mechanic list.</Text>
+                <View style={styles.statusToggleRow}>
+                  <TouchableOpacity
+                    style={[styles.statusToggle, edit.available !== false && styles.statusToggleActive]}
+                    onPress={() => handleAvailabilityChange(true)}
+                    disabled={availabilityLoading}
+                  >
+                    <Text style={[styles.statusToggleText, edit.available !== false && styles.statusToggleTextActive]}>Available</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.statusToggle, edit.available === false && styles.statusToggleBusy]}
+                    onPress={() => handleAvailabilityChange(false)}
+                    disabled={availabilityLoading}
+                  >
+                    <Text style={[styles.statusToggleText, edit.available === false && styles.statusToggleTextActive]}>Working</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : null}
+            {profile.certificationDocumentUrl ? (
+              <TouchableOpacity style={ styles.secondaryButton } onPress={ () => Linking.openURL(`${apiBase.replace('/api', '')}${profile.certificationDocumentUrl}`) }>
+                <Text style={ styles.secondaryButtonText }>Open certification document</Text>
+              </TouchableOpacity>
+            ) : null}
+            {profile.shopActDocumentUrl ? (
+              <TouchableOpacity style={ styles.secondaryButton } onPress={ () => Linking.openURL(`${apiBase.replace('/api', '')}${profile.shopActDocumentUrl}`) }>
+                <Text style={ styles.secondaryButtonText }>Open Shop Act document</Text>
+              </TouchableOpacity>
+            ) : null}
+            { profile.role === 'MECHANIC' && profile.garageOwnerEligible ? (
+              <TouchableOpacity style={ styles.secondaryButton } onPress={ () => router.push('/garage-owner/register') }>
+                <Text style={ styles.secondaryButtonText }>Have a garage? Register as Garage Owner</Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity style={ styles.secondaryButton } onPress={ () => setSignoutConfirmVisible(true) }>
               <Text style={ styles.secondaryButtonText }>Sign out</Text>
             </TouchableOpacity>
           </View>
         ) }
+
+        { profile?.role === 'GARAGE_OWNER' ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>My Mechanics</Text>
+            <Text style={styles.emptyText}>
+              Add and manage your own workers. Assigned workers will handle travel and live location for your bookings.
+            </Text>
+            <TouchableOpacity style={styles.primaryButton} onPress={() => { resetWorkerForm(); setWorkerModalVisible(true); }}>
+              <Text style={styles.primaryButtonText}>Add Mechanic</Text>
+            </TouchableOpacity>
+            {(profile.myMechanics || []).map((worker) => (
+              <View key={worker.mechanicId} style={styles.bannerRow}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={styles.profileValue}>{worker.mechName} {worker.surname}</Text>
+                  <Text style={styles.reviewText}>{worker.speciality || '-'}</Text>
+                  <Text style={styles.reviewMeta}>{worker.available ? 'Ready for assignment' : 'Busy'}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    setEditingWorkerId(worker.mechanicId);
+                    setWorkerForm({
+                      firstName: worker.mechName || '',
+                      surname: worker.surname || '',
+                      mobile: '',
+                      email: '',
+                      password: '',
+                      experience: '',
+                      speciality: worker.speciality || '',
+                      expertise: worker.expertise || '',
+                      city: worker.city || '',
+                      about: '',
+                    });
+                    setWorkerModalVisible(true);
+                  }}
+                >
+                  <Text style={styles.link}>Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={async () => { await api.deleteGarageMechanic(token, worker.mechanicId); await loadProfile(); }}>
+                  <Text style={styles.linkDanger}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         { profile?.role === 'ADMIN' && (
           <>
@@ -489,6 +657,25 @@ const ProfileScreen = () => {
                   { visibilityLoading ? `Submitting${visibilityDots}` : 'Update Visibility' }
                 </Text>
               </TouchableOpacity>
+
+              <View style={ styles.divider } />
+
+              <Text style={ styles.subTitle }>Pending provider approvals</Text>
+              {pendingApprovals.length === 0 ? <Text style={styles.reviewText}>No pending approvals.</Text> : null}
+              {pendingApprovals.map((item) => (
+                <View key={item.mechanicId} style={styles.bannerRow}>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={styles.profileValue}>{item.mechName} {item.surname}</Text>
+                    <Text style={styles.reviewText}>{item.role} · {item.speciality || '-'}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => handleApproval(item.mechanicId, 'APPROVED')}>
+                    <Text style={styles.link}>Approve</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleApproval(item.mechanicId, 'REJECTED')}>
+                    <Text style={styles.linkDanger}>Reject</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
             </View>
           </>
         ) }
@@ -543,7 +730,7 @@ const ProfileScreen = () => {
               style={ styles.input }
             />
 
-            { profile?.role === 'MECHANIC' && (
+            { (profile?.role === 'MECHANIC' || profile?.role === 'GARAGE_OWNER') && (
               <>
                 <TextInput
                   placeholderTextColor={ colors.placeholder }
@@ -581,13 +768,6 @@ const ProfileScreen = () => {
                   style={ styles.input }
                   multiline
                 />
-                <View style={ styles.switchRow }>
-                  <Text style={ styles.switchLabel }>Shop active</Text>
-                  <Switch
-                    value={ !!edit.shopActive }
-                    onValueChange={ (value) => setEdit((prev) => ({ ...prev, shopActive: value })) }
-                  />
-                </View>
               </>
             ) }
 
@@ -634,6 +814,29 @@ const ProfileScreen = () => {
               <Text style={ styles.primaryButtonText }>Sign out</Text>
             </TouchableOpacity>
             <TouchableOpacity style={ styles.secondaryButton } onPress={ () => setSignoutConfirmVisible(false) }>
+              <Text style={ styles.secondaryButtonText }>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={ workerModalVisible } transparent animationType="slide" onRequestClose={() => setWorkerModalVisible(false)}>
+        <View style={ styles.modalBackdrop }>
+          <View style={ styles.modalContent }>
+            <Text style={ styles.sectionTitle }>{editingWorkerId ? 'Edit Mechanic' : 'Add Mechanic'}</Text>
+            <TextInput placeholderTextColor={ colors.placeholder } placeholder="First name" value={ workerForm.firstName } onChangeText={ (value) => setWorkerForm((prev) => ({ ...prev, firstName: value })) } style={ styles.input } />
+            <TextInput placeholderTextColor={ colors.placeholder } placeholder="Surname" value={ workerForm.surname } onChangeText={ (value) => setWorkerForm((prev) => ({ ...prev, surname: value })) } style={ styles.input } />
+            <TextInput placeholderTextColor={ colors.placeholder } placeholder="Mobile" value={ workerForm.mobile } onChangeText={ (value) => setWorkerForm((prev) => ({ ...prev, mobile: value })) } style={ styles.input } />
+            {!editingWorkerId ? <TextInput placeholderTextColor={ colors.placeholder } placeholder="Email" value={ workerForm.email } onChangeText={ (value) => setWorkerForm((prev) => ({ ...prev, email: value })) } style={ styles.input } /> : null}
+            {!editingWorkerId ? <TextInput placeholderTextColor={ colors.placeholder } placeholder="Temporary password" value={ workerForm.password } onChangeText={ (value) => setWorkerForm((prev) => ({ ...prev, password: value })) } style={ styles.input } /> : null}
+            <TextInput placeholderTextColor={ colors.placeholder } placeholder="Experience" value={ workerForm.experience } onChangeText={ (value) => setWorkerForm((prev) => ({ ...prev, experience: value })) } style={ styles.input } />
+            <TextInput placeholderTextColor={ colors.placeholder } placeholder="Speciality" value={ workerForm.speciality } onChangeText={ (value) => setWorkerForm((prev) => ({ ...prev, speciality: value })) } style={ styles.input } />
+            <TextInput placeholderTextColor={ colors.placeholder } placeholder="Expertise" value={ workerForm.expertise } onChangeText={ (value) => setWorkerForm((prev) => ({ ...prev, expertise: value })) } style={ styles.input } />
+            <TextInput placeholderTextColor={ colors.placeholder } placeholder="City" value={ workerForm.city } onChangeText={ (value) => setWorkerForm((prev) => ({ ...prev, city: value })) } style={ styles.input } />
+            <TextInput placeholderTextColor={ colors.placeholder } placeholder="About" value={ workerForm.about } onChangeText={ (value) => setWorkerForm((prev) => ({ ...prev, about: value })) } style={ styles.input } />
+            <TouchableOpacity style={ styles.primaryButton } onPress={ saveWorker } disabled={ workerSaving }>
+              <Text style={ styles.primaryButtonText }>{workerSaving ? 'Saving...' : 'Save Mechanic'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={ styles.secondaryButton } onPress={ () => setWorkerModalVisible(false) }>
               <Text style={ styles.secondaryButtonText }>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -818,6 +1021,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  switchHint: {
+    color: colors.muted,
+    fontSize: 12,
+  },
+  statusCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#CFE0F6',
+    backgroundColor: '#F5F9FF',
+    padding: 12,
+    gap: 10,
+  },
+  statusToggleRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  statusToggle: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  statusToggleActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  statusToggleBusy: {
+    backgroundColor: '#FFF7ED',
+    borderColor: '#FDBA74',
+  },
+  statusToggleText: {
+    color: colors.text,
+    fontWeight: '700',
+  },
+  statusToggleTextActive: {
+    color: '#FFFFFF',
+  },
   primaryButton: {
     backgroundColor: colors.primary,
     paddingVertical: 12,
@@ -842,6 +1085,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     paddingVertical: 2,
     paddingHorizontal: 10,
+  },
+  buttonDisabled: {
+    opacity: 0.75,
   },
   divider: {
     height: 1,

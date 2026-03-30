@@ -1,7 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import * as Location from 'expo-location';
 import AppShell from '../components/layout/AppShell';
+import KeyboardScreen from '../components/utility/KeyboardScreen';
 import { useAuth } from '../src/context/AuthContext';
 import api from '../src/services/api';
 import COLORS from '../theme/colors';
@@ -29,7 +31,29 @@ export default function VehicleForm() {
   const [ issue, setIssue ] = useState('');
   const [ result, setResult ] = useState(null);
   const [ submitting, setSubmitting ] = useState(false);
+  const [bookingLocation, setBookingLocation] = useState(null);
   const submittingDots = useLoadingDots(submitting);
+
+  const ensureBookingLocation = async () => {
+    if (bookingLocation) return bookingLocation;
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      throw new Error('Location permission is required before booking');
+    }
+    const current =
+      (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null)) ||
+      (await Location.getLastKnownPositionAsync({}).catch(() => null));
+    if (!current) {
+      throw new Error('Unable to detect your current location');
+    }
+    const nextLocation = {
+      latitude: current.coords.latitude,
+      longitude: current.coords.longitude,
+      address: `Lat ${current.coords.latitude.toFixed(5)}, Lng ${current.coords.longitude.toFixed(5)}`,
+    };
+    setBookingLocation(nextLocation);
+    return nextLocation;
+  };
 
   const handleSubmit = async () => {
     if (submitting) return;
@@ -54,12 +78,16 @@ export default function VehicleForm() {
 
     try {
       setSubmitting(true);
+      const currentLocation = await ensureBookingLocation();
       const booking = await api.createBooking(token, {
         mechanicId: Number(mechanicId),
         vehicleMake: vehicleType,
         vehicleModel: model,
         vehicleYear: fuelType,
         issueDescription: issue || 'General inspection',
+        serviceLatitude: currentLocation.latitude,
+        serviceLongitude: currentLocation.longitude,
+        serviceAddress: currentLocation.address,
       });
       router.replace({ pathname: '/booking', params: { bookingId: booking.id } });
     } catch (err) {
@@ -76,11 +104,20 @@ export default function VehicleForm() {
 
   return (
     <AppShell hideChrome hideSupport>
-      <KeyboardAvoidingView
-        behavior={ Platform.OS === 'ios' ? 'padding' : 'height' }
-        style={ { flex: 1 } }
-      >
-        <ScrollView contentContainerStyle={ styles.container } bounces={ false }>
+      <KeyboardScreen contentContainerStyle={ styles.container }>
+          {mode !== 'diy' ? (
+            <View style={styles.warningCard}>
+              <Text style={styles.warningTitle}>Confirm Service Location</Text>
+              <Text style={styles.warningText}>
+                Before booking, please confirm you&apos;re at the location where your vehicle needs service.
+              </Text>
+              <TouchableOpacity style={styles.secondaryButton} onPress={ensureBookingLocation}>
+                <Text style={styles.secondaryButtonText}>
+                  {bookingLocation ? 'Location confirmed' : 'Use current location'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
           <Text style={ styles.heading }>Vehicle Information</Text>
           <TextInput
             placeholderTextColor={ COLORS.placeholder }
@@ -128,8 +165,7 @@ export default function VehicleForm() {
               </TouchableOpacity>
             </View>
           ) }
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardScreen>
     </AppShell>
   );
 }
@@ -166,6 +202,22 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   primaryButtonText: { color: '#FFFFFF', fontWeight: '700' },
+  warningCard: {
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#93C5FD',
+    gap: 8,
+  },
+  warningTitle: {
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  warningText: {
+    color: COLORS.muted,
+    fontSize: 12,
+  },
   resultCard: {
     marginTop: 12,
     padding: 16,

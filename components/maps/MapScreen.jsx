@@ -87,7 +87,20 @@ const hasSameCoordinates = (a, b) => {
   );
 };
 
-const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, riderImage, destinationImage }) => {
+const MapScreen = ({
+  riderLocation,
+  destinationLocation,
+  onRiderLocationUpdate,
+  riderImage,
+  destinationImage,
+  allowLiveTracking = true,
+  allowManualRouting = true,
+  riderLabel = 'Mechanic',
+  destinationLabel = 'Service Pin',
+  routeDistanceKm: routeDistanceKmProp = null,
+  routeDurationMinutes: routeDurationMinutesProp = null,
+  onRouteMetrics,
+}) => {
   const cameraRef = useRef(null);
   const fullCameraRef = useRef(null);
   const watchRef = useRef(null);
@@ -95,6 +108,8 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
   const routeCacheRef = useRef(new Map());
   const lastDirectionTapRef = useRef(0);
   const autoRouteTriggeredRef = useRef(false);
+  const lastAutoRouteAtRef = useRef(0);
+  const lastAutoRouteOriginRef = useRef(null);
 
   const [deviceLocation, setDeviceLocation] = useState(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -174,7 +189,6 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
   const destinationLat = destinationLocation?.latitude;
   const destinationLng = destinationLocation?.longitude;
 
-  const riderCoordinate = activeRider ? [activeRider.longitude, activeRider.latitude] : null;
   const destinationCoordinate = destinationLocation ? [destinationLocation.longitude, destinationLocation.latitude] : null;
   const mainRouteSourceId = 'routeSource-main';
   const fullRouteSourceId = 'routeSource-full';
@@ -301,6 +315,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
         setSteps(mappedSteps);
         setDistanceKm(nextDistanceKm);
         setDurationMinutes(nextDurationMinutes);
+        onRouteMetrics?.({ distanceKm: nextDistanceKm, durationMinutes: nextDurationMinutes });
         setIsRouteVisible(true);
 
         fitMapBounds(cameraRef, mappedRoute);
@@ -320,7 +335,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
         setRouteLoading(false);
       }
     },
-    [fitMapBounds, isFullScreen, normalizeRouteCoordinates]
+    [fitMapBounds, isFullScreen, normalizeRouteCoordinates, onRouteMetrics]
   );
 
   useEffect(() => {
@@ -367,6 +382,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
   }, []);
 
   useEffect(() => {
+    if (!allowLiveTracking) return undefined;
     const startTracking = async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -388,8 +404,8 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
         watchRef.current = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.BestForNavigation,
-            timeInterval: 2500,
-            distanceInterval: 5,
+            timeInterval: 8000,
+            distanceInterval: 20,
           },
           (position) => {
             const next = { latitude: position.coords.latitude, longitude: position.coords.longitude };
@@ -407,7 +423,7 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
     return () => {
       watchRef.current?.remove();
     };
-  }, [onRiderLocationUpdate]);
+  }, [onRiderLocationUpdate, allowLiveTracking]);
 
   useEffect(() => {
     if (!mapCenter || isRouteVisible) return;
@@ -423,27 +439,51 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
   }, [activeRider, destinationLocation, fitToParticipants, mapCenter, isRouteVisible]);
 
   useEffect(() => {
-    if (!activeRider || !destinationLocation || autoRouteTriggeredRef.current || routeLoading) return;
+    if (!activeRider || !destinationLocation || routeLoading) return;
     if (hasSameCoordinates(activeRider, destinationLocation)) return;
+    const now = Date.now();
+    const distanceMoved = lastAutoRouteOriginRef.current
+      ? haversineMeters(lastAutoRouteOriginRef.current, activeRider)
+      : Number.POSITIVE_INFINITY;
+    const shouldRefresh =
+      !autoRouteTriggeredRef.current ||
+      (allowManualRouting && distanceMoved >= 35 && now - lastAutoRouteAtRef.current >= 45000);
+    if (!shouldRefresh) return;
     autoRouteTriggeredRef.current = true;
+    lastAutoRouteAtRef.current = now;
+    lastAutoRouteOriginRef.current = activeRider;
     fetchRoute(activeRider, destinationLocation, { forceRefresh: false });
-  }, [activeRider, destinationLocation, fetchRoute, routeLoading]);
+  }, [activeRider, destinationLocation, fetchRoute, routeLoading, allowManualRouting]);
 
   const statusText = useMemo(() => {
+    if (!allowLiveTracking) return 'Tracking shared by the active mechanic';
     if (!trackingEnabled) return 'Location permission required for live tracking';
     if (routeLoading) return 'Updating route...';
     return 'Live tracking active';
-  }, [trackingEnabled, routeLoading]);
+  }, [allowLiveTracking, trackingEnabled, routeLoading]);
 
   const displayedDistanceKm = useMemo(() => {
     if (distanceKm !== null && isRouteVisible) {
       return Number(distanceKm);
     }
+    if (routeDistanceKmProp !== null && routeDistanceKmProp !== undefined) {
+      return Number(routeDistanceKmProp);
+    }
     if (activeRider && destinationLocation) {
       return haversineMeters(activeRider, destinationLocation) / 1000;
     }
     return null;
-  }, [distanceKm, isRouteVisible, activeRider, destinationLocation]);
+  }, [distanceKm, isRouteVisible, activeRider, destinationLocation, routeDistanceKmProp]);
+
+  const displayedDurationMinutes = useMemo(() => {
+    if (durationMinutes !== null && isRouteVisible) {
+      return Number(durationMinutes);
+    }
+    if (routeDurationMinutesProp !== null && routeDurationMinutesProp !== undefined) {
+      return Number(routeDurationMinutesProp);
+    }
+    return null;
+  }, [durationMinutes, isRouteVisible, routeDurationMinutesProp]);
 
   const handleDirectionPress = useCallback(async () => {
     if (!activeRider || !destinationLocation) {
@@ -541,13 +581,14 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
           >
             <View style={styles.markerWrap}>
               <View style={styles.profileMarkerContainer}>
-                <Image
-                  source={fullRiderUrl ? { uri: fullRiderUrl } : require('../../assets/images/profile.png')}
-                  style={styles.profileImage}
-                />
+                {fullRiderUrl ? (
+                  <Image source={{ uri: fullRiderUrl }} style={styles.profileImage} />
+                ) : (
+                  <Ionicons name="navigate" size={18} color={COLORS.primary} />
+                )}
               </View>
               <View style={styles.markerLabel}>
-                <Text style={styles.markerLabelText}>Mechanic</Text>
+                <Text style={styles.markerLabelText}>{riderLabel}</Text>
               </View>
             </View>
           </MapLibreGL.PointAnnotation>
@@ -560,13 +601,14 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
           >
             <View style={styles.markerWrap}>
               <View style={styles.profileMarkerContainer}>
-                <Image
-                  source={fullDestinationUrl ? { uri: fullDestinationUrl } : require('../../assets/images/profile.png')}
-                  style={styles.profileImage}
-                />
+                {fullDestinationUrl ? (
+                  <Image source={{ uri: fullDestinationUrl }} style={styles.profileImage} />
+                ) : (
+                  <Ionicons name="location" size={18} color={COLORS.danger} />
+                )}
               </View>
               <View style={styles.markerLabel}>
-                <Text style={styles.markerLabelText}>Vehicle Owner</Text>
+                <Text style={styles.markerLabelText}>{destinationLabel}</Text>
               </View>
             </View>
           </MapLibreGL.PointAnnotation>
@@ -619,22 +661,24 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
               {displayedDistanceKm !== null ? `${displayedDistanceKm.toFixed(1)} km` : '--'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.overlayButton, routeLoading && styles.overlayButtonDisabled]}
-            onPress={handleDirectionPress}
-            disabled={directionDisabled}
-          >
-            {routeLoading ? (
-              <ActivityIndicator size="small" color={COLORS.primary} />
-            ) : (
-              <Ionicons name="navigate" size={18} color={COLORS.primary} />
-            )}
-          </TouchableOpacity>
+          {allowManualRouting ? (
+            <TouchableOpacity
+              style={[styles.overlayButton, routeLoading && styles.overlayButtonDisabled]}
+              onPress={handleDirectionPress}
+              disabled={directionDisabled}
+            >
+              {routeLoading ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <Ionicons name="navigate" size={18} color={COLORS.primary} />
+              )}
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         <View style={styles.infoBox}>
-          {durationMinutes !== null && isRouteVisible ? (
-            <Text style={styles.infoText}>Duration: {Math.round(durationMinutes)} min</Text>
+          {displayedDurationMinutes !== null ? (
+            <Text style={styles.infoText}>ETA: {Math.round(displayedDurationMinutes)} min</Text>
           ) : null}
           {routeError ? <Text style={styles.infoErrorText}>{routeError}</Text> : null}
           {trackingError ? <Text style={styles.infoErrorText}>{trackingError}</Text> : null}
@@ -668,17 +712,19 @@ const MapScreen = ({ riderLocation, destinationLocation, onRiderLocationUpdate, 
                 {displayedDistanceKm !== null ? `${displayedDistanceKm.toFixed(1)} km` : '--'}
               </Text>
             </View>
-            <TouchableOpacity
-              style={[styles.overlayButtonDark, routeLoading && styles.overlayButtonDisabled]}
-              onPress={handleDirectionPress}
-              disabled={directionDisabled}
-            >
-              {routeLoading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Ionicons name="navigate" size={18} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
+            {allowManualRouting ? (
+              <TouchableOpacity
+                style={[styles.overlayButtonDark, routeLoading && styles.overlayButtonDisabled]}
+                onPress={handleDirectionPress}
+                disabled={directionDisabled}
+              >
+                {routeLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="navigate" size={18} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
+            ) : null}
           </View>
 
           <View style={styles.bottomSheet}>

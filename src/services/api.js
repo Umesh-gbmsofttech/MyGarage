@@ -4,12 +4,19 @@ const api = {
   signupOwner: (payload) => apiClient.request({ path: '/api/auth/signup/owner', method: 'POST', body: payload }),
   signupMechanic: (payload) => apiClient.request({ path: '/api/auth/signup/mechanic', method: 'POST', body: payload }),
   signin: (payload) => apiClient.request({ path: '/api/auth/signin', method: 'POST', body: payload }),
+  forgotPassword: (payload) => apiClient.request({ path: '/api/auth/forgot-password', method: 'POST', body: payload }),
+  verifyOtp: (payload) => apiClient.request({ path: '/api/auth/verify-otp', method: 'POST', body: payload }),
+  resetPassword: (payload) => apiClient.request({ path: '/api/auth/reset-password', method: 'POST', body: payload }),
 
   getProfile: (token) => apiClient.request({ path: '/api/profile/me', token }),
   updateProfile: (token, payload) =>
     apiClient.request({ path: '/api/profile/me', method: 'PUT', token, body: payload }),
+  updateAvailability: (token, payload) =>
+    apiClient.request({ path: '/api/profile/availability', method: 'PUT', token, body: payload }),
   uploadProfileImage: (token, formData) =>
     apiClient.request({ path: '/api/profile/upload-avatar', method: 'POST', token, body: formData }),
+  uploadProfileDocument: (token, formData, type) =>
+    apiClient.request({ path: `/api/profile/upload-document?type=${encodeURIComponent(type)}`, method: 'POST', token, body: formData }),
 
   topRatedMechanics: (limit = 5) => apiClient.request({ path: `/api/mechanics/top-rated?limit=${limit}` }),
   randomMechanics: (limit = 10) => apiClient.request({ path: `/api/mechanics/random?limit=${limit}` }),
@@ -40,12 +47,16 @@ const api = {
     apiClient.request({ path: '/api/bookings', method: 'POST', token, body: payload }),
   respondBooking: (token, id, payload) =>
     apiClient.request({ path: `/api/bookings/${id}/respond`, method: 'POST', token, body: payload }),
+  assignBookingWorker: (token, id, payload) =>
+    apiClient.request({ path: `/api/bookings/${id}/assign-worker`, method: 'POST', token, body: payload }),
   verifyMeetOtp: (token, id, payload) =>
     apiClient.request({ path: `/api/bookings/${id}/verify-meet-otp`, method: 'POST', token, body: payload }),
   verifyCompleteOtp: (token, id, payload) =>
     apiClient.request({ path: `/api/bookings/${id}/verify-complete-otp`, method: 'POST', token, body: payload }),
   generateCompleteOtp: (token, id) =>
     apiClient.request({ path: `/api/bookings/${id}/generate-complete-otp`, method: 'POST', token }),
+  updateRouteStats: (token, id, payload) =>
+    apiClient.request({ path: `/api/bookings/${id}/route-stats`, method: 'POST', token, body: payload }),
   reportBooking: (token, id, payload) =>
     apiClient.request({ path: `/api/bookings/${id}/report`, method: 'POST', token, body: payload }),
   bookingSummary: (token, id) =>
@@ -57,7 +68,7 @@ const api = {
   mechanicBookings: (token, page = 0, size = 10) =>
     apiClient.request({ path: `/api/bookings/mechanic?page=${page}&size=${size}`, token }),
 
-  verifyOtp: (token, bookingId, payload) =>
+  verifyBookingOtp: (token, bookingId, payload) =>
     apiClient.request({ path: `/api/otp/bookings/${bookingId}/verify`, method: 'POST', token, body: payload }),
 
   updateLocation: (token, bookingId, payload) =>
@@ -86,6 +97,19 @@ const api = {
   deleteBanner: (token, id) => apiClient.request({ path: `/api/admin/banners/${id}`, method: 'DELETE', token }),
   updateMechanicVisibility: (token, id, visible) =>
     apiClient.request({ path: `/api/admin/mechanics/${id}/visibility/${visible}`, method: 'PUT', token }),
+  pendingMechanicApprovals: (token) => apiClient.request({ path: '/api/admin/mechanics/pending-approvals', token }),
+  updateMechanicApproval: (token, id, payload) =>
+    apiClient.request({ path: `/api/admin/mechanics/${id}/approval`, method: 'PUT', token, body: payload }),
+
+  registerGarageOwner: (token, payload) =>
+    apiClient.request({ path: '/api/garage-owner/register', method: 'POST', token, body: payload }),
+  garageOwnerMechanics: (token) => apiClient.request({ path: '/api/garage-owner/mechanics', token }),
+  addGarageMechanic: (token, payload) =>
+    apiClient.request({ path: '/api/garage-owner/mechanics', method: 'POST', token, body: payload }),
+  updateGarageMechanic: (token, workerUserId, payload) =>
+    apiClient.request({ path: `/api/garage-owner/mechanics/${workerUserId}`, method: 'PUT', token, body: payload }),
+  deleteGarageMechanic: (token, workerUserId) =>
+    apiClient.request({ path: `/api/garage-owner/mechanics/${workerUserId}`, method: 'DELETE', token }),
 
   chat: ({ message, userName, userRole }) =>
     apiClient.request({ path: '/api/chat', method: 'POST', body: { message, userName, userRole } }),

@@ -1,4 +1,4 @@
-package com.mygarage.app
+package com.my.garage
 
 import android.app.Application
 import android.content.res.Configuration

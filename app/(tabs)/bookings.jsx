@@ -204,6 +204,11 @@ const BookingsScreen = () => {
             }
             const booking = item.booking;
             const canReport = booking.status === 'COMPLETED' && booking.id === mostRecentCompletedId;
+            const isAssignedWorker = user.role === 'MECHANIC' && booking.assignedWorkerId === user.id;
+            const canRespondAsPrimaryProvider =
+              (user.role === 'MECHANIC' || user.role === 'GARAGE_OWNER') && booking.status === 'PENDING';
+            const canRespondAsAssignedWorker =
+              isAssignedWorker && booking.status === 'ACCEPTED' && booking.assignedWorkerAccepted !== true;
             return (
               <View style={styles.card}>
                 <View>
@@ -213,6 +218,11 @@ const BookingsScreen = () => {
                   <Text style={styles.cardText}>Model: {booking.vehicleModel || '-'}</Text>
                   <Text style={styles.cardText}>Year: {booking.vehicleYear || '-'}</Text>
                   <Text style={styles.cardText}>Issue: {booking.issueDescription}</Text>
+                  {booking.assignedWorkerId ? (
+                    <Text style={styles.cardText}>
+                      Assignment: {booking.assignedWorkerAccepted ? 'Accepted by assigned mechanic' : 'Waiting for assigned mechanic'}
+                    </Text>
+                  ) : null}
                   {booking.serviceCompletedAt ? (
                     <Text style={styles.cardText}>
                       Service Date: {new Date(booking.serviceCompletedAt).toLocaleString()}
@@ -239,7 +249,7 @@ const BookingsScreen = () => {
                       <Text style={styles.primaryButtonText}>Report</Text>
                     </TouchableOpacity>
                   ) : null}
-                  {user.role === 'MECHANIC' && booking.status === 'PENDING' ? (
+                  {canRespondAsPrimaryProvider || canRespondAsAssignedWorker ? (
                     <View style={styles.inlineActions}>
                       <TouchableOpacity
                         style={[styles.acceptButton, respondingKey && styles.actionDisabled]}
